@@ -1,0 +1,4 @@
+Skenario,Model,Input,Accuracy,F1 (Binary),F1 (Macro),AUC-ROC,Best Epoch,Best Val AUC,Output
+S1,MLP Tabular,Tabular (4 fitur),0.604,0.6165,0.6036,0.6515,5.0,0.6433,
+S2,DenseNet-121,Gambar X-ray (224×224),0.6808,0.7622,0.6384,0.6953,10.0,0.749,
+S3,Multimodal Fusion,Tabular + Gambar,0.6976,0.7825,0.6433,0.705,,,Biner

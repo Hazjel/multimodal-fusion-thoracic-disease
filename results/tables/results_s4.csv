@@ -1,0 +1,2 @@
+Skenario,Model,Input,Output,Macro AUC,mAP
+S4,Multimodal Fusion,Tabular + Gambar,14 Label,0.7694,0.2252
