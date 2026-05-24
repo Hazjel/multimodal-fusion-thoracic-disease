@@ -1,10 +1,9 @@
 """
-Model architectures for all 4 scenarios.
+Model architectures for three scenarios (S1-S3), all binary classification.
 
 S1: TabularMLP       — MLP on patient metadata
 S2: ImageCNN         — DenseNet-121 on chest X-ray
-S3: MultimodalFusion — Intermediate fusion, binary output
-S4: MultimodalFusion — Intermediate fusion, multi-label output
+S3: MultimodalFusion — Intermediate fusion (tabular + image)
 
 All share the same branch architectures for fair comparison.
 """
@@ -44,9 +43,6 @@ class TabularBranch(nn.Module):
                 nn.Dropout(dropout),
             ])
             prev_dim = h_dim
-        # Final projection to feature space
-        layers.append(nn.Linear(prev_dim, output_dim))
-        layers.append(nn.ReLU(inplace=True))
         self.encoder = nn.Sequential(*layers)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -58,7 +54,9 @@ class ImageBranch(nn.Module):
     DenseNet-121 backbone for chest X-ray feature extraction.
     Input: (batch, 3, 224, 224) → Output: (batch, image_feature_dim)
 
-    Freezes first N% of backbone for transfer learning stability.
+    Supports two pretrained weight sources:
+    - ImageNet (default): general visual features
+    - CheXNet: DenseNet-121 pretrained on NIH ChestX-ray14 (domain-specific)
     """
 
     def __init__(
@@ -67,16 +65,19 @@ class ImageBranch(nn.Module):
         pretrained: bool = cfg.model.pretrained,
         freeze_ratio: float = cfg.model.freeze_backbone_ratio,
         dropout: float = cfg.model.dropout_rate,
+        use_chexnet: bool = cfg.model.use_chexnet,
+        chexnet_path: str = cfg.model.chexnet_weights_path,
     ):
         super().__init__()
-        # Load pretrained DenseNet-121
-        weights = models.DenseNet121_Weights.IMAGENET1K_V1 if pretrained else None
-        backbone = models.densenet121(weights=weights)
+        # CheXNet weights loaded manually — skip ImageNet init to avoid wasted download
+        imagenet_weights = models.DenseNet121_Weights.IMAGENET1K_V1 if (pretrained and not use_chexnet) else None
+        backbone = models.densenet121(weights=imagenet_weights)
 
-        # DenseNet-121 feature extractor: all layers except final classifier
         self.features = backbone.features
-        # DenseNet-121 features output: (batch, 1024, 7, 7) for 224x224 input
         self.pool = nn.AdaptiveAvgPool2d(1)
+
+        if use_chexnet:
+            self._load_chexnet_weights(chexnet_path)
 
         # Freeze early layers for stable fine-tuning
         all_params = list(self.features.parameters())
@@ -92,6 +93,44 @@ class ImageBranch(nn.Module):
             nn.Dropout(dropout),
         )
 
+    def _load_chexnet_weights(self, path: str) -> None:
+        """Load DenseNet-121 feature weights from a CheXNet checkpoint."""
+        import os
+        if not os.path.exists(path):
+            print(f"[ImageBranch] CheXNet weights not found at {path} — falling back to random init")
+            return
+
+        checkpoint = torch.load(path, map_location="cpu", weights_only=False)
+        raw = checkpoint.get("state_dict", checkpoint)
+
+        # Supports arnoweng/CheXNet format: "module.densenet121.features.*"
+        # and plain formats: "densenet121.features.*" or "features.*"
+        prefixes = [
+            "module.densenet121.features.",
+            "densenet121.features.",
+            "features.",
+        ]
+        mapped = {}
+        for k, v in raw.items():
+            for prefix in prefixes:
+                if k.startswith(prefix):
+                    new_key = k[len(prefix):]
+                    # Fix older torchvision naming: "norm.1" → "norm1", "conv.1" → "conv1"
+                    new_key = new_key.replace("norm.1", "norm1").replace("norm.2", "norm2")
+                    new_key = new_key.replace("conv.1", "conv1").replace("conv.2", "conv2")
+                    mapped[new_key] = v
+                    break
+
+        if not mapped:
+            print("[ImageBranch] CheXNet: could not map any weights — check checkpoint format")
+            return
+
+        missing, unexpected = self.features.load_state_dict(mapped, strict=False)
+        if missing or unexpected:
+            print(f"[ImageBranch] CheXNet weights loaded — missing: {len(missing)}, unexpected: {len(unexpected)}")
+        else:
+            print("[ImageBranch] CheXNet weights loaded — all keys matched perfectly")
+
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         features = self.features(x)
         features = nn.functional.relu(features, inplace=True)
@@ -103,10 +142,7 @@ class ImageBranch(nn.Module):
 
 
 class TabularMLP(nn.Module):
-    """
-    Scenario S1: Tabular-only classification.
-    Supports both binary and multi-label output.
-    """
+    """Scenario S1: Tabular-only binary classification (Normal vs Abnormal)."""
 
     def __init__(self, num_classes: int = cfg.data.num_classes):
         super().__init__()
@@ -119,10 +155,7 @@ class TabularMLP(nn.Module):
 
 
 class ImageCNN(nn.Module):
-    """
-    Scenario S2: Image-only classification using DenseNet-121.
-    Supports both binary and multi-label output.
-    """
+    """Scenario S2: Image-only binary classification using DenseNet-121."""
 
     def __init__(self, num_classes: int = cfg.data.num_classes):
         super().__init__()
@@ -140,11 +173,8 @@ class ImageCNN(nn.Module):
 
 class MultimodalFusion(nn.Module):
     """
-    Scenario S3/S4: Intermediate Fusion.
+    Scenario S3: Intermediate Fusion — binary classification.
     Dual-branch (tabular MLP + image CNN) → concatenate → shared classifier.
-
-    S3: num_classes=1 for binary
-    S4: num_classes=14 for multi-label
     """
 
     def __init__(self, num_classes: int = cfg.data.num_classes):
@@ -192,21 +222,20 @@ def build_model(
     Factory function — construct model by scenario name.
 
     Args:
-        scenario: "S1", "S2", "S3", or "S4"
-        num_classes: override default. S3=1 (binary), S4=14 (multi-label)
+        scenario: "S1", "S2", or "S3" (all binary)
+        num_classes: override default (default 1 for binary)
     """
     if num_classes is None:
-        num_classes = 1 if scenario == "S3" else cfg.data.num_classes
+        num_classes = 1
 
     model_map = {
         "S1": lambda: TabularMLP(num_classes=num_classes),
         "S2": lambda: ImageCNN(num_classes=num_classes),
         "S3": lambda: MultimodalFusion(num_classes=num_classes),
-        "S4": lambda: MultimodalFusion(num_classes=num_classes),
     }
 
     if scenario not in model_map:
-        raise ValueError(f"Unknown scenario: {scenario}. Use S1/S2/S3/S4.")
+        raise ValueError(f"Unknown scenario: {scenario}. Use S1/S2/S3.")
 
     model = model_map[scenario]()
 

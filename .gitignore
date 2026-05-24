@@ -17,8 +17,10 @@ env/
 # Jupyter
 .ipynb_checkpoints/
 
-# Model checkpoints (large binary files - regenerate by running notebooks)
+# Model checkpoints & pretrained weights (large binary files)
 results/checkpoints/*.pt
+models/model.pth.tar
+models/scaler_tabular.pkl
 
 # Raw dataset images (too large, download from Kaggle/NIH)
 data/raw/

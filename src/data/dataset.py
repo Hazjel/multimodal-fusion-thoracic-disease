@@ -1,7 +1,7 @@
 """
 NIH Chest X-ray14 Dataset with multimodal support.
 Handles image loading (across 12 subdirs), tabular feature extraction,
-multi-label encoding, and patient-level splitting.
+binary label encoding, and patient-level splitting.
 """
 import os
 from pathlib import Path
@@ -53,7 +53,7 @@ def load_and_prepare_metadata(
         cfg.data.age_clip_min, cfg.data.age_clip_max
     )
 
-    # Encode multi-label targets: "Atelectasis|Effusion" → [1,0,...,1,...,0]
+    # Encode per-disease labels for metadata completeness
     label_names = list(cfg.data.label_names)
     for label in label_names:
         df[label] = df["Finding Labels"].apply(
@@ -119,8 +119,7 @@ class NIHChestXrayDataset(Dataset):
     Returns:
         image: (3, 224, 224) tensor
         tabular: (num_tabular_features,) tensor
-        label_binary: scalar tensor (0 or 1)
-        label_multilabel: (14,) tensor
+        label_binary: scalar tensor (0 or 1, Normal vs Abnormal)
     """
 
     TABULAR_COLS = ["Patient Age", "gender_encoded", "view_PA", "Follow-up #"]
@@ -165,18 +164,13 @@ class NIHChestXrayDataset(Dataset):
         # Tabular features (already scaled)
         tabular = torch.tensor(self.tabular_array[idx], dtype=torch.float32)
 
-        # Labels
+        # Label
         binary_label = torch.tensor(row["binary_label"], dtype=torch.float32)
-        multilabel = torch.tensor(
-            row[self.label_names].values.astype(np.float32),
-            dtype=torch.float32,
-        )
 
         return {
             "image": image,
             "tabular": tabular,
             "label_binary": binary_label,
-            "label_multilabel": multilabel,
         }
 
 
@@ -211,19 +205,15 @@ def get_transforms(is_training: bool = True) -> transforms.Compose:
         ])
 
 
-def compute_pos_weights(df: pd.DataFrame, label_names: List[str]) -> torch.Tensor:
+def compute_pos_weight(df: pd.DataFrame) -> torch.Tensor:
     """
-    Compute positive class weights for weighted BCE loss.
-    Formula: (num_negative / num_positive) per label.
-    Handles extreme imbalance (e.g., Hernia at 0.2%).
+    Compute positive class weight for binary weighted BCE loss.
+    Formula: sqrt(num_negative / num_positive) for Normal vs Abnormal.
     """
-    labels = df[label_names].values
-    pos_counts = labels.sum(axis=0)
-    neg_counts = len(labels) - pos_counts
-
-    # Clip to avoid division by zero, apply sqrt to dampen extreme weights
-    pos_weights = np.sqrt(neg_counts / np.maximum(pos_counts, 1.0))
-    return torch.tensor(pos_weights, dtype=torch.float32)
+    pos_count = df["binary_label"].sum()
+    neg_count = len(df) - pos_count
+    weight = neg_count / max(pos_count, 1.0)
+    return torch.tensor([weight], dtype=torch.float32)
 
 
 def create_dataloaders(
@@ -256,8 +246,8 @@ def create_dataloaders(
     )
     print(f"[Data] Split — Train: {len(df_train)} | Val: {len(df_val)} | Test: {len(df_test)}")
 
-    # Compute class weights from training set
-    pos_weights = compute_pos_weights(df_train, list(cfg.data.label_names))
+    # Compute binary class weight from training set
+    pos_weights = compute_pos_weight(df_train)
 
     # Create datasets with appropriate transforms
     train_ds = NIHChestXrayDataset(

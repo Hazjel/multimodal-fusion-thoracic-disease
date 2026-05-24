@@ -1,0 +1,5 @@
+Skenario,Threshold,AUC-ROC,F1 Macro,F1 Binary,Sensitivity,Specificity,FN,FP
+S2 DenseNet-121,Default (0.50),0.7455,0.6930,0.8022,0.8845,0.4882,1818,5047
+S2 DenseNet-121,Optimal (0.47),0.7455,0.6887,0.8036,0.8949,0.4698,1654,5228
+S3 Multimodal,Default (0.50),0.7449,0.6931,0.8036,0.8888,0.4840,1750,5088
+S3 Multimodal,Optimal (0.46),0.7449,0.6869,0.8064,0.9062,0.4554,1476,5370

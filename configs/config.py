@@ -62,7 +62,7 @@ class DataConfig:
         "Infiltration", "Mass", "Nodule", "Pleural_Thickening",
         "Pneumonia", "Pneumothorax",
     )
-    num_classes: int = 14
+    num_classes: int = 1  # binary: Normal vs Abnormal (S1-S3)
     # Tabular features extracted from NIH metadata
     tabular_features: tuple = (
         "Patient Age", "Patient Gender", "View Position", "Follow-up #",
@@ -83,6 +83,9 @@ class ModelConfig:
     # Image branch
     backbone: str = "densenet121"
     pretrained: bool = True
+    # CheXNet: DenseNet-121 pretrained on chest X-ray (stronger than ImageNet)
+    use_chexnet: bool = True
+    chexnet_weights_path: str = r"D:\TA\nih-multimodal\models\model.pth.tar"
     # DenseNet-121 outputs 1024-dim features after GAP
     image_feature_dim: int = 512
     freeze_backbone_ratio: float = 0.75  # Freeze first 75% of backbone
@@ -115,6 +118,8 @@ class TrainConfig:
     use_amp: bool = True
     # Gradient accumulation to simulate larger batch
     gradient_accumulation_steps: int = 2  # effective batch = 32
+    # Gradient clipping
+    gradient_clip_norm: float = 1.0
     # Random seed
     seed: int = 42
 
