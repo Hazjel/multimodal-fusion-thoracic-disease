@@ -21,6 +21,7 @@ env/
 results/checkpoints/*.pt
 results/checkpoints/*.pkl
 results/**/*.pt
+results/**/*.pkl
 models/model.pth.tar
 models/scaler_tabular.pkl
 

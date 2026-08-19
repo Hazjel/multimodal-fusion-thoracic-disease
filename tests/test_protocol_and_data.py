@@ -3,21 +3,40 @@ from __future__ import annotations
 import tempfile
 import unittest
 import json
+from dataclasses import replace
 from pathlib import Path
+from unittest.mock import patch
 
 import numpy as np
 import pandas as pd
 from PIL import Image
 from torchvision.transforms import InterpolationMode
 
-from src.data.dataset import get_transforms, load_and_prepare_metadata
-from src.protocol.contracts import protocol_hash, semantic_config_hash
+from configs.config import cfg as base_cfg
+from src.data.dataset import (
+    get_transforms,
+    load_and_prepare_metadata,
+    load_official_training_pool,
+    make_fold_dataloaders,
+)
+from src.protocol.contracts import (
+    atomic_write_json,
+    file_sha256,
+    protocol_hash,
+    semantic_config_hash,
+)
 from src.protocol.environment import environment_hash
 from src.protocol.guards import OfficialTestAccessError, assert_official_test_access
 from src.protocol.manifests import (
     audit_manifests,
     create_deployment_manifest,
     create_primary_fold_manifest,
+)
+from src.protocol.spec import build_scientific_spec
+from src.protocol.stages import (
+    StageGateError,
+    load_frozen_protocol,
+    validate_cv_request,
 )
 
 
@@ -54,6 +73,67 @@ class ProtocolIdentityTests(unittest.TestCase):
         second = environment_hash({"implementation_commit": "b", "python": "3.12"})
         self.assertEqual(first, second)
 
+    def _frozen_fixture(self, root: Path):
+        folds = root / "folds.csv"
+        deployment = root / "deployment_split.csv"
+        folds.write_text("image_index\n", encoding="utf-8")
+        deployment.write_text("image_index\n", encoding="utf-8")
+        scientific = build_scientific_spec(
+            fold_manifest_hash=file_sha256(folds),
+            deployment_split_hash=file_sha256(deployment),
+        )
+        protocol = {
+            "status": "FROZEN",
+            "protocol_hash": protocol_hash(scientific),
+            "scientific_spec": scientific,
+            "provenance": {},
+        }
+        atomic_write_json(root / "protocol.json", protocol)
+        return protocol
+
+    def test_frozen_runtime_and_scientific_hash_are_enforced(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            protocol = self._frozen_fixture(root)
+            loaded = load_frozen_protocol(root)
+            self.assertEqual(loaded["protocol_hash"], protocol["protocol_hash"])
+
+            mismatched_cfg = replace(
+                base_cfg,
+                train=replace(base_cfg.train, lr_backbone=5e-4),
+            )
+            with patch("src.protocol.stages.cfg", mismatched_cfg):
+                with self.assertRaises(RuntimeError):
+                    load_frozen_protocol(root)
+
+            tampered = json.loads((root / "protocol.json").read_text(encoding="utf-8"))
+            tampered["scientific_spec"]["evaluation"]["threshold"] = 0.4
+            atomic_write_json(root / "protocol.json", tampered)
+            with self.assertRaises(StageGateError):
+                load_frozen_protocol(root)
+
+    def test_stage_gate_blocks_main_before_model_lock(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self._frozen_fixture(root)
+            validate_cv_request(
+                stage="C2",
+                scenario="S2",
+                backbone="densenet121",
+                pretraining="imagenet",
+                feature_set="D",
+                protocol_dir=root,
+            )
+            with self.assertRaises(StageGateError):
+                validate_cv_request(
+                    stage="C4",
+                    scenario="S3",
+                    backbone="densenet121",
+                    pretraining="imagenet",
+                    feature_set="D",
+                    protocol_dir=root,
+                )
+
 
 class DataContractTests(unittest.TestCase):
     def _metadata(self):
@@ -85,6 +165,36 @@ class DataContractTests(unittest.TestCase):
             frame.to_csv(path, index=False)
             with self.assertRaises(ValueError):
                 load_and_prepare_metadata(path)
+
+    def test_training_pool_loader_does_not_require_test_list(self):
+        frame = self._metadata()
+        with tempfile.TemporaryDirectory() as directory:
+            train_path = Path(directory) / "train_val_list.txt"
+            train_path.write_text("a.png\nb.png\n", encoding="utf-8")
+            prepared_path = Path(directory) / "metadata.csv"
+            frame.to_csv(prepared_path, index=False)
+            prepared = load_and_prepare_metadata(prepared_path)
+            training = load_official_training_pool(prepared, train_path)
+        self.assertEqual(set(training["Image Index"]), {"a.png", "b.png"})
+
+    def test_canonical_loaders_have_restorable_generators_and_no_persistent_workers(self):
+        frame = self._metadata()
+        with tempfile.TemporaryDirectory() as directory:
+            metadata_path = Path(directory) / "metadata.csv"
+            frame.to_csv(metadata_path, index=False)
+            prepared = load_and_prepare_metadata(metadata_path)
+            train_loader, validation_loader, _, _ = make_fold_dataloaders(
+                prepared,
+                prepared,
+                {},
+                modalities=("tabular",),
+                feature_set="D",
+                seed=42,
+            )
+        self.assertIsNotNone(train_loader.generator)
+        self.assertIsNotNone(validation_loader.generator)
+        self.assertFalse(train_loader.persistent_workers)
+        self.assertFalse(validation_loader.persistent_workers)
 
     def test_transforms_are_explicit_and_shape_is_canonical(self):
         training = get_transforms(True)

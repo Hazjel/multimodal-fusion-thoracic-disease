@@ -120,6 +120,24 @@ def load_official_partitions(
     return train, test
 
 
+def load_official_training_pool(
+    frame: pd.DataFrame,
+    train_list_path: Path,
+) -> pd.DataFrame:
+    """Load C1-C6 data without opening or parsing the official test list."""
+    train_images = set(pd.read_csv(train_list_path, header=None)[0].astype(str))
+    training = frame[frame["Image Index"].isin(train_images)].copy().reset_index(drop=True)
+    if training.empty:
+        raise ValueError("Official NIH training pool is empty")
+    missing = train_images - set(training["Image Index"].astype(str))
+    if missing:
+        first = sorted(missing)[0]
+        raise FileNotFoundError(
+            f"Training manifest references {len(missing)} unavailable images; first={first}"
+        )
+    return training
+
+
 def get_transforms(is_training: bool = True) -> transforms.Compose:
     normalize = transforms.Normalize(
         mean=[0.485, 0.456, 0.406],
@@ -263,11 +281,15 @@ def make_fold_dataloaders(
         tabular_cols=columns,
         modalities=modalities,
     )
-    generator = torch.Generator().manual_seed(seed)
+    train_generator = torch.Generator().manual_seed(seed)
+    validation_generator = torch.Generator().manual_seed(seed + 1_000_000)
     common = {
         "num_workers": cfg.data.num_workers,
         "pin_memory": cfg.data.pin_memory,
-        "persistent_workers": cfg.data.num_workers > 0,
+        # Workers are recreated each epoch and deterministically seeded from
+        # the DataLoader generator. Persistent worker RNG cannot be restored
+        # exactly after a process restart.
+        "persistent_workers": False,
         "worker_init_fn": _seed_worker,
     }
     train_loader = DataLoader(
@@ -275,7 +297,7 @@ def make_fold_dataloaders(
         batch_size=cfg.train.batch_size,
         shuffle=True,
         drop_last=True,
-        generator=generator,
+        generator=train_generator,
         **common,
     )
     validation_loader = DataLoader(
@@ -283,6 +305,7 @@ def make_fold_dataloaders(
         batch_size=cfg.train.eval_batch_size,
         shuffle=False,
         drop_last=False,
+        generator=validation_generator,
         **common,
     )
     return train_loader, validation_loader, train_ds.scaler, compute_pos_weight(train_frame)

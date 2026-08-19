@@ -7,8 +7,10 @@ Follow-up #.
 Status saat ini:
 
 - Desain penelitian: **FINAL**.
-- Protocol: **v1.0.0-rc2 — Final Freeze Candidate**.
-- `v1.0.0 — FROZEN` hanya setelah seluruh acceptance test C0 lulus.
+- Protocol: **v1.0.0 — FROZEN**.
+- Scientific protocol hash: `d42337690181f1054297f514934ad0c98bb718223bc06d8de5569f40a184ee32`.
+- C0 awal telah lulus; implementation patch wajib menjalankan C0 ulang tanpa
+  mengubah scientific protocol hash.
 - Hasil commit terdahulu tetap disimpan sebagai legacy/exploratory dan bukan
   bukti canonical.
 
@@ -25,7 +27,14 @@ Primary evidence menggunakan patient-level five-fold
 secondary holdout dengan disclosure bahwa hasilnya pernah terlihat pada
 eksperimen lama.
 
-## Menjalankan C0
+## Status eksekusi
+
+- C0 dan protocol freeze: **selesai**.
+- C1–C7 canonical: **belum menghasilkan hasil final**.
+- Semua hasil sebelum freeze adalah pilot/exploratory dan bukan primary
+  evidence BAB IV.
+
+## Menjalankan acceptance test
 
 ```powershell
 python -m pip install -r requirements-c0.txt
@@ -37,8 +46,8 @@ BatchNorm, initialization equality S2/S3, PyTabKit runtime contract,
 checkpoint/resume, metrics, prediction schema, dan image-conditioned SHAP.
 C0 bukan eksperimen performa.
 
-Commit implementasi C0 terlebih dahulu, lalu jalankan C0 pada commit bersih.
-Setelah report menyatakan PASS untuk commit tersebut:
+Untuk setup repository baru, freeze hanya boleh dilakukan setelah report C0
+menyatakan PASS pada implementation commit yang bersih:
 
 ```powershell
 python run_experiment.py freeze
@@ -50,10 +59,31 @@ Perintah tersebut menghasilkan `folds.csv`, `deployment_split.csv`,
 
 Detail lengkap: [Canonical Protocol rc2](docs/CANONICAL_PROTOCOL_v1.0.0-rc2.md).
 
+## Antarmuka eksekusi canonical
+
+Generic `cv` sengaja dihapus dari CLI agar stage tidak dapat dilewati.
+
+```powershell
+python run_experiment.py status
+python run_experiment.py benchmark-tabular --model all
+python run_experiment.py screen-image --backbone all --pretraining imagenet
+python run_experiment.py select
+python run_experiment.py main --scenario all
+python run_experiment.py ablate --scenario both --feature-set all
+```
+
+`main` dan `ablate` hard-fail sebelum `model_lock.json` tersedia. Conditional
+CheXNet hanya dapat dijalankan setelah C3 memilih kandidat DenseNet-121.
+
 ## Guardrail
 
 - Canonical factory hanya menerima S1, S2, dan S3.
 - Full CV ditolak sebelum protocol berstatus `FROZEN`.
+- Scientific hash, runtime config, dan kedua manifest diverifikasi sebelum
+  setiap canonical run; mismatch menghasilkan hard error.
+- C1–C6 hanya membaca `train_val_list.txt`, bukan `test_list.txt`.
+- Resume menyimpan RNG global dan state generator DataLoader; worker tidak
+  dibuat persistent agar restart dapat direproduksi.
 - Official test diblokir sebelum C7.
 - CheXNet yang gagal dimuat tidak pernah fallback diam-diam.
 - Aplikasi C7 harus menampilkan **skor model**, bukan probabilitas terkalibrasi.

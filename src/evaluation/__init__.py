@@ -108,6 +108,53 @@ def collect_prediction_frame(
     return frame
 
 
+def prediction_frame_from_arrays(
+    *,
+    image_indices,
+    patient_ids,
+    labels,
+    probabilities,
+    fold: int,
+    split: str,
+    model_name: str,
+    scenario: str,
+    feature_set: str,
+    pretraining: str,
+    checkpoint_epoch: int,
+    protocol_hash: str,
+    semantic_config_hash: str,
+    run_id: str,
+) -> pd.DataFrame:
+    """Create the canonical schema for non-PyTorch benchmark estimators."""
+    image_indices = np.asarray(image_indices).astype(str)
+    patient_ids = np.asarray(patient_ids, dtype=np.int64)
+    labels = np.asarray(labels, dtype=np.int64)
+    probabilities = np.asarray(probabilities, dtype=np.float64)
+    lengths = {len(image_indices), len(patient_ids), len(labels), len(probabilities)}
+    if len(lengths) != 1:
+        raise ValueError("Prediction arrays must have identical length")
+    frame = pd.DataFrame({
+        "image_index": image_indices,
+        "patient_id": patient_ids,
+        "fold": int(fold),
+        "split": split,
+        "true_label": labels,
+        "probability": probabilities,
+        "prediction_0_5": (probabilities >= cfg.evaluation.decision_threshold).astype(np.int64),
+        "model": model_name,
+        "scenario": scenario,
+        "feature_set": feature_set,
+        "pretraining": pretraining,
+        "seed": cfg.train.seed,
+        "checkpoint_epoch": int(checkpoint_epoch),
+        "protocol_hash": protocol_hash,
+        "semantic_config_hash": semantic_config_hash,
+        "run_id": run_id,
+    }, columns=PREDICTION_COLUMNS)
+    validate_prediction_frame(frame)
+    return frame
+
+
 def compute_metrics(
     probabilities: np.ndarray,
     labels: np.ndarray,

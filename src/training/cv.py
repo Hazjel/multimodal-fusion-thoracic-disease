@@ -1,7 +1,6 @@
 """Manifest-driven canonical patient-level cross-validation runner."""
 from __future__ import annotations
 
-import json
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -13,7 +12,7 @@ from src.data.dataset import (
     TABULAR_FEATURE_SETS,
     build_image_index,
     load_and_prepare_metadata,
-    load_official_partitions,
+    load_official_training_pool,
     make_fold_dataloaders,
 )
 from src.evaluation import (
@@ -30,21 +29,13 @@ from src.protocol.contracts import (
     semantic_config_hash,
 )
 from src.protocol.environment import collect_environment, environment_hash
-from src.protocol.manifests import validate_manifest_hash
 from src.protocol.registry import upsert_registry
+from src.protocol.stages import (
+    load_frozen_protocol,
+    oof_path_for,
+    validate_cv_request,
+)
 from src.training import save_scaler, train
-
-
-def _load_protocol(protocol_dir: Path) -> Dict[str, Any]:
-    protocol = read_json(protocol_dir / "protocol.json")
-    if protocol.get("status") != "FROZEN":
-        raise RuntimeError("Full CV is blocked until protocol status is FROZEN")
-    scientific = protocol["scientific_spec"]
-    validate_manifest_hash(
-        protocol_dir / "folds.csv",
-        scientific["splits"]["primary_cv"]["fold_manifest_hash"],
-    )
-    return protocol
 
 
 def _modalities(scenario: str):
@@ -58,6 +49,7 @@ def _modalities(scenario: str):
 def run_cross_validation(
     scenario: str,
     *,
+    stage: str,
     protocol_dir: Path,
     backbone_name: str = "densenet121",
     pretraining: str = "imagenet",
@@ -69,7 +61,15 @@ def run_cross_validation(
     if feature_set not in TABULAR_FEATURE_SETS:
         raise ValueError(f"Unknown feature set: {feature_set}")
     protocol_dir = Path(protocol_dir)
-    protocol = _load_protocol(protocol_dir)
+    validate_cv_request(
+        stage=stage,
+        scenario=scenario,
+        backbone=backbone_name,
+        pretraining=pretraining,
+        feature_set=feature_set,
+        protocol_dir=protocol_dir,
+    )
+    protocol = load_frozen_protocol(protocol_dir)
     protocol_hash_value = protocol["protocol_hash"]
     implementation = git_commit(cfg.paths.project_root)
     environment = collect_environment(implementation)
@@ -78,8 +78,8 @@ def run_cross_validation(
 
     image_index = build_image_index(cfg.paths.image_dirs)
     metadata = load_and_prepare_metadata(cfg.paths.csv_path, image_index)
-    training_pool, _ = load_official_partitions(
-        metadata, cfg.paths.train_list_path, cfg.paths.test_list_path
+    training_pool = load_official_training_pool(
+        metadata, cfg.paths.train_list_path
     )
     manifest = pd.read_csv(protocol_dir / "folds.csv")
     manifest_lookup = manifest.set_index("image_index")["fold"]
@@ -133,7 +133,7 @@ def run_cross_validation(
             environment_hash=environment_hash_value,
             implementation_commit=implementation,
         )
-        run_id = f"{scenario}-{backbone_name}-{pretraining}-{feature_set}-fold{fold}-{semantic_hash[:12]}"
+        run_id = f"{stage}-{scenario}-{backbone_name}-{pretraining}-{feature_set}-fold{fold}-{semantic_hash[:12]}"
         run_dir = protocol_dir / "runs" / run_id
         success = run_dir / "_SUCCESS"
         prediction_path = run_dir / "predictions.csv"
@@ -149,6 +149,7 @@ def run_cross_validation(
             "semantic_config_hash": semantic_hash,
             "implementation_commit": implementation,
             "environment_hash": environment_hash_value,
+            "stage": stage,
             "scenario": scenario,
             "fold": fold,
             "feature_set": feature_set,
@@ -193,7 +194,7 @@ def run_cross_validation(
         atomic_write_json(metrics_path, metrics)
         upsert_registry(protocol_dir / "experiment_registry.csv", {
             "run_id": run_id,
-            "phase": "main" if scenario in {"S1", "S3"} else "screening",
+            "phase": stage,
             "scenario": scenario,
             "model": backbone_name if scenario != "S1" else "canonical_mlp",
             "fold": fold,
@@ -215,10 +216,19 @@ def run_cross_validation(
 
     oof = pd.concat(fold_predictions, ignore_index=True)
     validate_oof_coverage(oof, manifest["image_index"])
-    oof_path = protocol_dir / "oof" / f"{scenario}-{backbone_name}-{pretraining}-{feature_set}.csv"
+    model_name = backbone_name if scenario != "S1" else "canonical_mlp"
+    oof_path = oof_path_for(
+        protocol_dir,
+        stage=stage,
+        scenario=scenario,
+        model=model_name,
+        pretraining=pretraining if scenario != "S1" else "not_applicable",
+        feature_set=feature_set,
+    )
     write_prediction_frame(oof, oof_path)
     summary = {
         "scenario": scenario,
+        "stage": stage,
         "backbone": backbone_name,
         "pretraining": pretraining,
         "feature_set": feature_set,

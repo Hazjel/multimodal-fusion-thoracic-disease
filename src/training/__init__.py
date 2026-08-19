@@ -151,6 +151,36 @@ def restore_rng_state(state: Mapping[str, Any]) -> None:
         torch.cuda.set_rng_state_all(state["torch_cuda"])
 
 
+def capture_dataloader_state(
+    train_loader: DataLoader,
+    val_loader: DataLoader,
+) -> Dict[str, torch.Tensor]:
+    """Capture loader generators that drive shuffle order and worker seeds."""
+    if train_loader.generator is None or val_loader.generator is None:
+        raise RuntimeError(
+            "Canonical loaders require explicit train and validation generators"
+        )
+    if train_loader.persistent_workers or val_loader.persistent_workers:
+        raise RuntimeError(
+            "Canonical deterministic resume requires persistent_workers=False"
+        )
+    return {
+        "train_generator": train_loader.generator.get_state(),
+        "validation_generator": val_loader.generator.get_state(),
+    }
+
+
+def restore_dataloader_state(
+    state: Mapping[str, torch.Tensor],
+    train_loader: DataLoader,
+    val_loader: DataLoader,
+) -> None:
+    if train_loader.generator is None or val_loader.generator is None:
+        raise RuntimeError("Cannot restore DataLoader state without explicit generators")
+    train_loader.generator.set_state(state["train_generator"])
+    val_loader.generator.set_state(state["validation_generator"])
+
+
 def _atomic_torch_save(payload: Mapping[str, Any], path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     fd, temporary = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".tmp", dir=path.parent)
@@ -174,6 +204,8 @@ def load_checkpoint(
     scheduler: torch.optim.lr_scheduler.ReduceLROnPlateau,
     scaler: torch.amp.GradScaler,
     device: torch.device,
+    train_loader: DataLoader,
+    val_loader: DataLoader,
 ) -> Dict[str, Any]:
     payload = torch.load(path, map_location=device, weights_only=False)
     model.load_state_dict(payload["model_state"])
@@ -181,6 +213,13 @@ def load_checkpoint(
     scheduler.load_state_dict(payload["scheduler_state"])
     scaler.load_state_dict(payload["grad_scaler_state"])
     restore_rng_state(payload["rng_state"])
+    if "dataloader_state" not in payload:
+        raise RuntimeError(
+            "Resume checkpoint predates the canonical DataLoader-state contract"
+        )
+    restore_dataloader_state(
+        payload["dataloader_state"], train_loader, val_loader
+    )
     return payload
 
 
@@ -220,6 +259,7 @@ def train(
     best_epoch = 0
     patience_count = 0
     history: List[Dict[str, Any]] = []
+    timing_seconds: List[float] = []
     metadata = dict(run_metadata or {})
     metadata["pos_weight"] = float(pos_weights.item())
 
@@ -231,6 +271,8 @@ def train(
             scheduler=scheduler,
             scaler=scaler,
             device=device,
+            train_loader=train_loader,
+            val_loader=val_loader,
         )
         if payload.get("run_metadata") != metadata:
             raise RuntimeError("Resume checkpoint metadata differs from current canonical run")
@@ -239,6 +281,7 @@ def train(
         best_epoch = int(payload["best_epoch"])
         patience_count = int(payload["patience_count"])
         history = list(payload["history"])
+        timing_seconds = list(payload.get("timing_seconds", []))
 
     for epoch in range(start_epoch, cfg.train.num_epochs + 1):
         started = time.perf_counter()
@@ -269,15 +312,16 @@ def train(
             patience_count = 0
         else:
             patience_count += 1
+        elapsed_seconds = time.perf_counter() - started
         history.append({
             "epoch": epoch,
             "train_loss": float(train_result["loss"]),
             "train_auc": float(train_result["roc_auc"]),
             "validation_loss": float(validation_result["loss"]),
             "validation_auc": validation_auc,
-            "elapsed_seconds": time.perf_counter() - started,
             "learning_rates": [group["lr"] for group in optimizer.param_groups],
         })
+        timing_seconds.append(elapsed_seconds)
         payload = {
             "epoch": epoch,
             "model_state": model.state_dict(),
@@ -285,16 +329,21 @@ def train(
             "scheduler_state": scheduler.state_dict(),
             "grad_scaler_state": scaler.state_dict(),
             "rng_state": capture_rng_state(),
+            "dataloader_state": capture_dataloader_state(train_loader, val_loader),
             "best_validation_auc": best_auc,
             "best_epoch": best_epoch,
             "patience_count": patience_count,
             "history": history,
+            "timing_seconds": timing_seconds,
             "run_metadata": metadata,
         }
         _atomic_torch_save(payload, last_path)
         if improved:
             _atomic_torch_save(payload, best_path)
-        atomic_write_json(history_path, {"epochs": history})
+        atomic_write_json(
+            history_path,
+            {"epochs": history, "timing_seconds": timing_seconds},
+        )
         if patience_count >= cfg.train.early_stop_patience:
             break
 

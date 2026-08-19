@@ -1,5 +1,11 @@
 # Canonical Execution Protocol v1.0.0-rc2
 
+> Status operasional: dipromosikan menjadi **v1.0.0 — FROZEN** setelah C0
+> PASS. Scientific protocol hash adalah
+> `d42337690181f1054297f514934ad0c98bb718223bc06d8de5569f40a184ee32`.
+> Patch implementasi setelah freeze wajib mempertahankan hash ini dan
+> menjalankan C0 ulang pada implementation commit baru.
+
 Status: **FINAL research design / freeze candidate**. The protocol becomes
 `v1.0.0 — FROZEN` only after C0 passes and immutable artifacts are generated.
 
