@@ -1,228 +1,53 @@
-"""
-Main experiment runner — trains S1/S2/S3, evaluates, runs XAI.
+"""Safe command-line entry point for the canonical execution protocol."""
+from __future__ import annotations
 
-Usage:
-    python run_experiment.py --scenario S1
-    python run_experiment.py --scenario S2
-    python run_experiment.py --scenario S3
-    python run_experiment.py --scenario all
-    python run_experiment.py --scenario S3 --xai-only  (skip training, load checkpoint)
-"""
 import argparse
+import subprocess
 import sys
 from pathlib import Path
 
-import torch
-
-sys.path.insert(0, str(Path(__file__).resolve().parent))
 from configs.config import cfg
-from src.data.dataset import create_dataloaders
-from src.models.architectures import build_model
-from src.training import train, save_scaler
-from src.evaluation import evaluate, plot_roc_curve, compare_scenarios, collect_predictions
-from src.xai import (
-    build_shap_background, save_shap_background, load_shap_background,
-    make_shap_explainer, compute_shap_values,
-    plot_shap_summary, plot_shap_waterfall,
-    compute_gradcam, plot_gradcam_grid,
-)
+from src.protocol.freeze import freeze_protocol
+from src.training.cv import run_cross_validation
 
 
-SCENARIOS = ["S1", "S2", "S3"]
-DEVICE    = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-
-def run_training(scenario: str, train_loader, val_loader, test_loader, pos_weights, scaler):
-    print(f"\n{'='*60}")
-    print(f"  SCENARIO {scenario}")
-    print(f"{'='*60}")
-
-    model = build_model(scenario).to(DEVICE)
-    model = train(model, train_loader, val_loader, pos_weights, scenario, DEVICE)
-
-    # Save scaler (needed for inference/XAI)
-    if scenario in ("S1", "S3", "S3-gated", "S3-attn"):
-        scaler_path = cfg.paths.checkpoint_dir / "scaler.pkl"
-        save_scaler(scaler, scaler_path)
-
-    return model
-
-
-def run_evaluation(scenario: str, model, test_loader):
-    metrics = evaluate(model, test_loader, DEVICE, split_name=f"{scenario}_test")
-    probs, labels = collect_predictions(model, test_loader, DEVICE)
-    plot_roc_curve(
-        probs, labels, scenario,
-        cfg.paths.figures_dir / f"roc_{scenario.lower()}.png",
+def _parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description="NIH multimodal canonical protocol")
+    subcommands = parser.add_subparsers(dest="command", required=True)
+    subcommands.add_parser("c0", help="Run non-performance C0 acceptance tests")
+    freeze = subcommands.add_parser("freeze", help="Generate frozen protocol artifacts after C0 PASS")
+    freeze.add_argument(
+        "--c0-report",
+        type=Path,
+        default=cfg.paths.results_dir / "c0" / "c0_acceptance.json",
     )
-    return metrics, (probs, labels)
+    cv = subcommands.add_parser("cv", help="Run a canonical manifest-driven CV phase")
+    cv.add_argument("--protocol-dir", type=Path, required=True)
+    cv.add_argument("--scenario", choices=["S1", "S2", "S3"], required=True)
+    cv.add_argument("--backbone", choices=list(cfg.model.image_candidates), default="densenet121")
+    cv.add_argument("--pretraining", choices=["imagenet", "chexnet"], default="imagenet")
+    cv.add_argument("--feature-set", choices=["A", "B", "C", "D"], default="D")
+    return parser
 
 
-def run_xai(model, train_ds, test_loader):
-    """Run dual XAI on S3 model."""
-    print("\n[XAI] Running dual XAI on S3...")
-
-    # ── SHAP ──────────────────────────────────────────────
-    bg_path = cfg.paths.xai_dir / "shap_background.npy"
-    if bg_path.exists():
-        print(f"[XAI] Loading existing SHAP background from {bg_path}")
-        background = load_shap_background(bg_path)
-    else:
-        print("[XAI] Building SHAP background (100 train samples)...")
-        background = build_shap_background(train_ds, n_samples=100)
-        save_shap_background(background, bg_path)
-
-    explainer = make_shap_explainer(model, background, DEVICE)
-
-    # Collect tabular from first 200 test samples for summary plot
-    test_tab = []
-    for batch in test_loader:
-        test_tab.append(batch["tabular"].numpy())
-        if sum(len(t) for t in test_tab) >= 200:
-            break
-    import numpy as np
-    X_tab_test = np.concatenate(test_tab)[:200]
-
-    print("[XAI] Computing SHAP values (this may take several minutes)...")
-    shap_vals = compute_shap_values(explainer, X_tab_test, nsamples=128)
-
-    plot_shap_summary(
-        shap_vals, X_tab_test,
-        cfg.paths.xai_dir / "shap_summary.png",
+def main() -> int:
+    args = _parser().parse_args()
+    if args.command == "c0":
+        return subprocess.call([sys.executable, "scripts/run_c0.py"], cwd=cfg.paths.project_root)
+    if args.command == "freeze":
+        target = freeze_protocol(args.c0_report)
+        print(f"Frozen protocol artifacts: {target}")
+        return 0
+    summary = run_cross_validation(
+        args.scenario,
+        protocol_dir=args.protocol_dir,
+        backbone_name=args.backbone,
+        pretraining=args.pretraining,
+        feature_set=args.feature_set,
     )
-
-    # Waterfall for first sample
-    plot_shap_waterfall(
-        shap_vals[0], float(explainer.expected_value),
-        cfg.paths.xai_dir / "shap_waterfall_sample0.png",
-        title="SHAP Waterfall — Sample 0",
-    )
-
-    # ── Grad-CAM ──────────────────────────────────────────
-    print("[XAI] Computing Grad-CAM on denseblock4...")
-    target_layer = model.image_branch.features.denseblock4
-
-    from PIL import Image
-    import torchvision.transforms as T
-
-    transform = T.Compose([
-        T.Resize((cfg.data.image_size, cfg.data.image_size)),
-        T.ToTensor(),
-        T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-    ])
-
-    cam_images, cam_heatmaps, cam_titles = [], [], []
-    n_cam = 8  # visualize first 8 test samples
-
-    for batch in test_loader:
-        for i in range(min(n_cam, len(batch["image"]))):
-            img_tensor = batch["image"][i:i+1].to(DEVICE)
-            tab_tensor = batch["tabular"][i:i+1].to(DEVICE)
-            label      = int(batch["label_binary"][i].item())
-            label_str  = "Abnormal" if label == 1 else "Normal"
-
-            heatmap = compute_gradcam(model, img_tensor, tab_tensor, target_layer)
-            # Reconstruct approximate PIL image for overlay (denormalize)
-            img_np = batch["image"][i].permute(1, 2, 0).numpy()
-            mean   = [0.485, 0.456, 0.406]
-            std    = [0.229, 0.224, 0.225]
-            img_np = (img_np * std + mean).clip(0, 1)
-            pil_img = Image.fromarray((img_np * 255).astype("uint8"))
-
-            cam_images.append(pil_img)
-            cam_heatmaps.append(heatmap)
-            cam_titles.append(f"GT: {label_str}")
-
-        if len(cam_images) >= n_cam:
-            break
-
-    plot_gradcam_grid(
-        cam_images[:n_cam], cam_heatmaps[:n_cam], cam_titles[:n_cam],
-        cfg.paths.xai_dir / "gradcam_grid.png",
-    )
-
-    # ── Complementarity analysis (joint SHAP + Grad-CAM reading) ──────
-    print("[XAI] Running SHAP<->Grad-CAM complementarity analysis...")
-    from src.xai.complementarity import (
-        analyze_complementarity, save_per_sample_csv,
-        plot_complementarity_scatter, print_summary,
-    )
-    comp = analyze_complementarity(
-        model, test_loader, explainer, target_layer, DEVICE,
-        n_samples=200, shap_nsamples=128,
-    )
-    save_per_sample_csv(comp, cfg.paths.xai_dir / "complementarity.csv")
-    plot_complementarity_scatter(comp, cfg.paths.xai_dir / "complementarity_scatter.png")
-    print_summary(comp)
-    print("[XAI] Done.")
-
-
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--scenario", default="all",
-                        choices=["S1", "S2", "S3", "S3-gated", "S3-attn", "all"],
-                        help="S3-gated/S3-attn: exploratory fusion variants of S3, "
-                             "not part of 'all' (see architectures.py)")
-    parser.add_argument("--xai-only", action="store_true",
-                        help="Skip training, load existing S3 checkpoint for XAI")
-    parser.add_argument("--cv", type=int, default=0, metavar="K",
-                        help="Run K-fold patient-level CV on the training pool "
-                             "instead of a single split (e.g. --cv 5)")
-    args = parser.parse_args()
-
-    if args.cv and args.cv > 1:
-        from src.training.cv import run_cross_validation, compare_cv_scenarios
-        target = SCENARIOS if args.scenario == "all" else [args.scenario]
-        cv_results = {}
-        for sc in target:
-            cv_results[sc] = run_cross_validation(sc, k=args.cv, device=DEVICE)
-        if len(cv_results) > 1:
-            compare_cv_scenarios(cv_results)
-        print("\n[Done] Cross-validation complete.")
-        return
-
-    print(f"[Setup] Device: {DEVICE}")
-    if DEVICE.type == "cuda":
-        print(f"        GPU: {torch.cuda.get_device_name(0)}")
-        print(f"        VRAM: {torch.cuda.get_device_properties(0).total_memory / 1e9:.1f} GB")
-
-    print("\n[Data] Loading dataset...")
-    train_loader, val_loader, test_loader, scaler, pos_weights = create_dataloaders()
-
-    # Reference to train dataset for SHAP background
-    train_ds = train_loader.dataset
-
-    target_scenarios = SCENARIOS if args.scenario == "all" else [args.scenario]
-    all_results = {}
-    all_preds = {}
-
-    for scenario in target_scenarios:
-        ckpt_path = cfg.paths.checkpoint_dir / f"model_{scenario.lower()}_best.pt"
-
-        if args.xai_only and scenario == "S3":
-            print(f"\n[XAI-only] Loading S3 checkpoint from {ckpt_path}")
-            model = build_model("S3").to(DEVICE)
-            model.load_state_dict(
-                torch.load(ckpt_path, map_location=DEVICE, weights_only=False)
-            )
-        else:
-            model = run_training(
-                scenario, train_loader, val_loader, test_loader, pos_weights, scaler
-            )
-
-        metrics, preds = run_evaluation(scenario, model, test_loader)
-        all_results[scenario] = metrics
-        all_preds[scenario] = preds
-
-        if scenario == "S3":
-            run_xai(model, train_ds, test_loader)
-
-    if len(all_results) > 1:
-        compare_scenarios(all_results, predictions=all_preds)
-
-    print("\n[Done] All experiments complete.")
-    print(f"       Results saved to: {cfg.paths.results_dir}")
+    print(summary)
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

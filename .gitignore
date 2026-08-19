@@ -47,3 +47,7 @@ desktop.ini
 # Logs
 *.log
 logs/
+
+# Generated C0 scratch/report state (freeze artifacts are kept separately)
+results/c0/
+results/canonical/.staging/

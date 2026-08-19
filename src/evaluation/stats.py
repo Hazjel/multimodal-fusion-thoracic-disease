@@ -15,9 +15,10 @@ All functions operate on (probs, labels) numpy arrays produced by
 ``evaluation.collect_predictions`` — no model retraining required for the
 test-set statistics.
 """
-from typing import Dict, Sequence, Tuple
+from typing import Any, Dict, Mapping, Sequence, Tuple
 
 import numpy as np
+import pandas as pd
 from scipy import stats
 from sklearn.metrics import roc_auc_score
 
@@ -210,3 +211,132 @@ def summarize_folds(fold_metrics: Sequence[Dict[str, float]]) -> Dict[str, Dict[
         vals = np.array([fm[k] for fm in fold_metrics], dtype=np.float64)
         summary[k] = {"mean": float(vals.mean()), "std": float(vals.std(ddof=1) if len(vals) > 1 else 0.0)}
     return summary
+
+
+def paired_patient_cluster_bootstrap(
+    frame: pd.DataFrame,
+    *,
+    probability_a: str,
+    probability_b: str,
+    patient_column: str = "patient_id",
+    label_column: str = "true_label",
+    n_boot: int = 2000,
+    alpha: float = 0.05,
+    seed: int = 42,
+) -> Dict[str, Any]:
+    """Paired AUC-difference CI by resampling patients, without retraining."""
+    required = {patient_column, label_column, probability_a, probability_b}
+    missing = required - set(frame.columns)
+    if missing:
+        raise ValueError(f"Cluster bootstrap missing columns: {sorted(missing)}")
+    patients = np.asarray(sorted(frame[patient_column].unique()))
+    if len(patients) < 2:
+        raise ValueError("Cluster bootstrap requires at least two patients")
+    grouped_indices = {
+        patient: frame.index[frame[patient_column] == patient].to_numpy()
+        for patient in patients
+    }
+    labels = frame[label_column].to_numpy(dtype=np.int64)
+    probs_a = frame[probability_a].to_numpy(dtype=np.float64)
+    probs_b = frame[probability_b].to_numpy(dtype=np.float64)
+    if len(np.unique(labels)) != 2:
+        raise ValueError("Point estimate requires both classes")
+    auc_a = float(roc_auc_score(labels, probs_a))
+    auc_b = float(roc_auc_score(labels, probs_b))
+    rng = np.random.RandomState(seed)
+    deltas = []
+    attempts = 0
+    max_attempts = n_boot * 20
+    while len(deltas) < n_boot and attempts < max_attempts:
+        attempts += 1
+        sampled = rng.choice(patients, size=len(patients), replace=True)
+        indices = np.concatenate([grouped_indices[patient] for patient in sampled])
+        sampled_labels = labels[indices]
+        if len(np.unique(sampled_labels)) != 2:
+            continue
+        deltas.append(
+            roc_auc_score(sampled_labels, probs_a[indices])
+            - roc_auc_score(sampled_labels, probs_b[indices])
+        )
+    if len(deltas) != n_boot:
+        raise RuntimeError(f"Only generated {len(deltas)}/{n_boot} valid bootstrap replicates")
+    values = np.asarray(deltas, dtype=np.float64)
+    return {
+        "auc_a": auc_a,
+        "auc_b": auc_b,
+        "delta_auc": auc_a - auc_b,
+        "ci_low": float(np.percentile(values, 100 * alpha / 2)),
+        "ci_high": float(np.percentile(values, 100 * (1 - alpha / 2))),
+        "se": float(values.std(ddof=1)),
+        "n_boot": int(n_boot),
+        "resampling_unit": patient_column,
+        "conditional_on_fitted_cv_models": True,
+    }
+
+
+def select_cnn_candidate(
+    predictions: Mapping[str, pd.DataFrame],
+    fold_aucs: Mapping[str, Sequence[float]],
+    trainable_parameters: Mapping[str, int],
+    median_training_seconds: Mapping[str, float],
+    *,
+    n_boot: int = 2000,
+    seed: int = 42,
+) -> Dict[str, Any]:
+    """Apply the frozen no-clear-separation candidate-set heuristic."""
+    names = sorted(predictions)
+    if set(names) != set(fold_aucs) or set(names) != set(trainable_parameters) or set(names) != set(median_training_seconds):
+        raise ValueError("Selection inputs must contain the same candidates")
+    pooled_auc = {}
+    for name in names:
+        candidate = predictions[name]
+        pooled_auc[name] = float(roc_auc_score(candidate["true_label"], candidate["probability"]))
+    top = max(names, key=lambda name: (pooled_auc[name], name))
+    top_frame = predictions[top][["image_index", "patient_id", "true_label", "probability"]].rename(
+        columns={"probability": "probability_top"}
+    )
+    candidate_set = [top]
+    comparisons: Dict[str, Any] = {}
+    for index, name in enumerate(names):
+        if name == top:
+            continue
+        other = predictions[name][["image_index", "patient_id", "true_label", "probability"]].rename(
+            columns={"probability": "probability_other"}
+        )
+        merged = top_frame.merge(
+            other,
+            on=["image_index", "patient_id", "true_label"],
+            how="inner",
+            validate="one_to_one",
+        )
+        if len(merged) != len(top_frame) or len(merged) != len(other):
+            raise ValueError(f"OOF predictions are not aligned for {top} vs {name}")
+        result = paired_patient_cluster_bootstrap(
+            merged,
+            probability_a="probability_top",
+            probability_b="probability_other",
+            n_boot=n_boot,
+            seed=seed + index,
+        )
+        comparisons[f"{top}_vs_{name}"] = result
+        if result["ci_low"] <= 0.0 <= result["ci_high"]:
+            candidate_set.append(name)
+
+    selected = min(
+        candidate_set,
+        key=lambda name: (
+            float(np.std(fold_aucs[name], ddof=1)),
+            int(trainable_parameters[name]),
+            float(median_training_seconds[name]),
+            name,
+        ),
+    )
+    return {
+        "top_by_pooled_auc": top,
+        "pooled_auc": pooled_auc,
+        "heuristic_candidate_set": sorted(candidate_set),
+        "comparisons": comparisons,
+        "selected": selected,
+        "tie_break": ["fold_auc_sd", "trainable_parameters", "median_training_seconds"],
+        "interpretation": "available OOF evidence did not clearly separate members of the heuristic set",
+    }
