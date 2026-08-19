@@ -1,0 +1,2 @@
+# Frozen protocol artifacts are content-addressed; preserve their exact bytes.
+results/canonical/** text eol=lf

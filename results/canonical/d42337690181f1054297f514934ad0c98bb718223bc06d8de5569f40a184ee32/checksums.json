@@ -1,0 +1,9 @@
+{
+  "data_audit.json": "10ec1265f15ff3090380ec1ec675cf1283cfe7718ebc85f0881787d1943571de",
+  "deployment_split.csv": "88b7987edb8981f323bd721a340c8fb6b9b9e6df55702bed70e4ba7cc022ac05",
+  "environment.json": "b8c46213e2bca186f563b96f4d8fe931fecfc112e40f12ab1dbcda03aad37366",
+  "experiment_registry.csv": "9cb9eb47cc377ee80d1fe3ee9653ab839c03ba1c0fb5eae3e1084c074716cf1a",
+  "folds.csv": "b57f3219a4cda82b19964e18d0677b5047a724fe5f65d0297a70a4777ea632bc",
+  "pip-freeze.txt": "2d820223e0d2d580e571e3fce63f96c5094ad3f40c29efa8e6f69033bc4d0af5",
+  "protocol.json": "736a97be5e622c3df7b71ed74135435c82071d65eae130dc252b4199cdfb4efb"
+}

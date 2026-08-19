@@ -1,0 +1,53 @@
+{
+  "deployment": [
+    {
+      "abnormal_prevalence": 0.41635525420246305,
+      "images": 77871,
+      "patients": 25087,
+      "split": "train"
+    },
+    {
+      "abnormal_prevalence": 0.4162718132439616,
+      "images": 8653,
+      "patients": 2921,
+      "split": "validation"
+    }
+  ],
+  "folds": [
+    {
+      "abnormal_prevalence": 0.4163199260286639,
+      "fold": 0,
+      "images": 17304,
+      "patients": 5642
+    },
+    {
+      "abnormal_prevalence": 0.41635365501300203,
+      "fold": 1,
+      "images": 17305,
+      "patients": 5634
+    },
+    {
+      "abnormal_prevalence": 0.4163777161349977,
+      "fold": 2,
+      "images": 17304,
+      "patients": 5512
+    },
+    {
+      "abnormal_prevalence": 0.41636332119951464,
+      "fold": 3,
+      "images": 17307,
+      "patients": 5645
+    },
+    {
+      "abnormal_prevalence": 0.4163199260286639,
+      "fold": 4,
+      "images": 17304,
+      "patients": 5575
+    }
+  ],
+  "official_test_images": 25596,
+  "official_test_patients": 2797,
+  "patient_overlap": 0,
+  "training_images": 86524,
+  "training_patients": 28008
+}
