@@ -1,0 +1,2 @@
+Skenario,Model,Input,Accuracy,F1 (Binary),F1 (Macro),AUC-ROC,Best Epoch,Best Val AUC
+S2-eff-tuned,"EfficientNet-B0 tuned (freeze=40%, ImageNet pretrain)",Gambar X-ray (224×224),0.711,0.7853,0.6716,0.7228,7,0.7671

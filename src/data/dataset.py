@@ -69,6 +69,24 @@ def load_and_prepare_metadata(
     df["gender_encoded"] = (df["Patient Gender"] == "M").astype(float)
     df["view_PA"] = (df["View Position"] == "PA").astype(float)
 
+    # --- Feature engineering (exploratory, added after S1-S3 baseline) ---
+    # visit_count: total number of scans on record for this patient (not just
+    # this row's follow-up index) — a repeat-visit patient may carry a
+    # different prior-probability signal than a one-off scan. Computed from
+    # Patient ID counts, which is safe w.r.t. leakage since it only uses each
+    # patient's own row count, not any label information.
+    df["visit_count"] = df.groupby("Patient ID")["Patient ID"].transform("count").astype(float)
+
+    # pixel_spacing_x: acquisition-quality proxy from the original DICOM
+    # metadata (mm/pixel). Different scanner calibration can correlate with
+    # site/equipment, previously unused in the tabular branch.
+    if "OriginalImagePixelSpacing[x" in df.columns:
+        df["pixel_spacing_x"] = pd.to_numeric(
+            df["OriginalImagePixelSpacing[x"], errors="coerce"
+        ).fillna(df["OriginalImagePixelSpacing[x"].median() if "OriginalImagePixelSpacing[x" in df.columns else 0.143)
+    else:
+        df["pixel_spacing_x"] = 0.143  # dataset-wide typical value as fallback
+
     return df
 
 
@@ -122,7 +140,12 @@ class NIHChestXrayDataset(Dataset):
         label_binary: scalar tensor (0 or 1, Normal vs Abnormal)
     """
 
-    TABULAR_COLS = ["Patient Age", "gender_encoded", "view_PA", "Follow-up #"]
+    # Original 4-feature baseline (S1/S2/S3, matches Metodologi.tex)
+    TABULAR_COLS_BASELINE = ["Patient Age", "gender_encoded", "view_PA", "Follow-up #"]
+    # Extended 6-feature variant with engineered features (exploratory —
+    # see load_and_prepare_metadata: visit_count, pixel_spacing_x)
+    TABULAR_COLS_EXTENDED = TABULAR_COLS_BASELINE + ["visit_count", "pixel_spacing_x"]
+    TABULAR_COLS = TABULAR_COLS_BASELINE  # default: keep baseline behavior unchanged
 
     def __init__(
         self,
@@ -131,11 +154,16 @@ class NIHChestXrayDataset(Dataset):
         transform: Optional[transforms.Compose] = None,
         scaler: Optional[StandardScaler] = None,
         fit_scaler: bool = False,
+        tabular_cols: Optional[List[str]] = None,
     ):
         self.df = dataframe.reset_index(drop=True)
         self.image_index = image_index
         self.transform = transform
         self.label_names = list(cfg.data.label_names)
+        # Per-instance override — defaults to the class-level baseline so
+        # existing S1/S2/S3 behavior is unchanged unless explicitly requested.
+        if tabular_cols is not None:
+            self.TABULAR_COLS = tabular_cols
 
         # Fit or apply StandardScaler for tabular features
         tabular_data = self.df[self.TABULAR_COLS].values.astype(np.float32)
@@ -208,7 +236,7 @@ def get_transforms(is_training: bool = True) -> transforms.Compose:
 def compute_pos_weight(df: pd.DataFrame) -> torch.Tensor:
     """
     Compute positive class weight for binary weighted BCE loss.
-    Formula: sqrt(num_negative / num_positive) for Normal vs Abnormal.
+    Formula: w = num_negative / num_positive  (proposal eq. w = (1-p+)/p+).
     """
     pos_count = df["binary_label"].sum()
     neg_count = len(df) - pos_count
@@ -218,9 +246,15 @@ def compute_pos_weight(df: pd.DataFrame) -> torch.Tensor:
 
 def create_dataloaders(
     batch_size: Optional[int] = None,
+    tabular_cols: Optional[List[str]] = None,
 ) -> Tuple[DataLoader, DataLoader, DataLoader, StandardScaler, torch.Tensor]:
     """
     Full pipeline: load data → split → create DataLoaders.
+
+    Args:
+        tabular_cols: override which tabular columns to use (default: the
+            4-feature baseline). Pass NIHChestXrayDataset.TABULAR_COLS_EXTENDED
+            to include the engineered features (visit_count, pixel_spacing_x).
 
     Returns:
         train_loader, val_loader, test_loader, scaler, pos_weights
@@ -254,16 +288,19 @@ def create_dataloaders(
         df_train, image_index,
         transform=get_transforms(is_training=True),
         fit_scaler=True,
+        tabular_cols=tabular_cols,
     )
     val_ds = NIHChestXrayDataset(
         df_val, image_index,
         transform=get_transforms(is_training=False),
         scaler=train_ds.scaler,
+        tabular_cols=tabular_cols,
     )
     test_ds = NIHChestXrayDataset(
         df_test, image_index,
         transform=get_transforms(is_training=False),
         scaler=train_ds.scaler,
+        tabular_cols=tabular_cols,
     )
 
     # DataLoaders

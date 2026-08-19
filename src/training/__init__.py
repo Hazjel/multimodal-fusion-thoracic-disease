@@ -32,7 +32,7 @@ def _build_optimizer(model: nn.Module, scenario: str) -> torch.optim.Optimizer:
     S1: Adam, single LR.
     S2/S3: AdamW, separate param groups for backbone / tabular / fusion+classifier.
     """
-    if scenario == "S1":
+    if scenario in ("S1", "S1-ext"):
         return torch.optim.Adam(
             model.parameters(),
             lr=cfg.train.lr_tabular,
@@ -166,7 +166,7 @@ def train(
             best_val_loss  = val_loss
             patience_count = 0
             torch.save(model.state_dict(), ckpt_path)
-            print(f"    [Checkpoint] Saved best model → {ckpt_path}")
+            print(f"    [Checkpoint] Saved best model -> {ckpt_path}")
         else:
             patience_count += 1
             if patience_count >= cfg.train.early_stop_patience:
@@ -183,4 +183,4 @@ def save_scaler(scaler, path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with open(path, "wb") as f:
         pickle.dump(scaler, f)
-    print(f"[Train] Scaler saved → {path}")
+    print(f"[Train] Scaler saved -> {path}")

@@ -19,6 +19,8 @@ env/
 
 # Model checkpoints & pretrained weights (large binary files)
 results/checkpoints/*.pt
+results/checkpoints/*.pkl
+results/**/*.pt
 models/model.pth.tar
 models/scaler_tabular.pkl
 
@@ -27,6 +29,10 @@ data/raw/
 data/images/
 *.dcm
 *.png.zip
+
+# Processed data & XAI array dumps (regenerable, large)
+data/processed/*.csv
+results/xai/*.npy
 
 # OS
 .DS_Store

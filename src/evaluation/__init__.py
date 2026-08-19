@@ -122,14 +122,23 @@ def plot_roc_curve(
     save_path.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(save_path, dpi=150)
     plt.close(fig)
-    print(f"[Eval] ROC curve saved → {save_path}")
+    print(f"[Eval] ROC curve saved -> {save_path}")
 
 
-def compare_scenarios(results: Dict[str, Dict[str, float]]) -> None:
+def compare_scenarios(
+    results: Dict[str, Dict[str, float]],
+    predictions: Dict[str, Tuple[np.ndarray, np.ndarray]] = None,
+) -> Dict[str, Dict]:
     """
     Print comparison table for S1/S2/S3.
     Computes delta_AUC = AUC_S3 - max(AUC_S1, AUC_S2).
+
+    If ``predictions`` is given (scenario -> (probs, labels) on the SAME test
+    set), also reports a bootstrap 95% CI per scenario and a DeLong test for
+    S3 vs each unimodal baseline. Returns the statistics as a dict for logging.
     """
+    from .stats import bootstrap_auc_ci, delong_test
+
     metrics_order = ["accuracy", "precision", "recall", "f1", "auc_roc"]
     scenarios     = list(results.keys())
 
@@ -142,13 +151,47 @@ def compare_scenarios(results: Dict[str, Dict[str, float]]) -> None:
         row = f"  {m:<12}" + "".join(f"  {results[s][m]:>10.4f}" for s in scenarios)
         print(row)
 
+    stats_out: Dict[str, Dict] = {}
+
+    # ── Bootstrap 95% CI per scenario (test-set resampling) ──────────
+    if predictions:
+        print(f"\n[Stats] AUC-ROC with bootstrap 95% CI (2000 resamples)")
+        ci_out = {}
+        for s in scenarios:
+            if s not in predictions:
+                continue
+            probs, labels = predictions[s]
+            ci = bootstrap_auc_ci(probs, labels)
+            ci_out[s] = ci
+            print(f"  {s}:  AUC = {ci['auc']:.4f}  "
+                  f"[{ci['ci_low']:.4f}, {ci['ci_high']:.4f}]")
+        stats_out["ci"] = ci_out
+
     if "S1" in results and "S2" in results and "S3" in results:
         delta_auc = results["S3"]["auc_roc"] - max(
             results["S1"]["auc_roc"], results["S2"]["auc_roc"]
         )
         sign = "+" if delta_auc >= 0 else ""
-        print(f"\n  ΔAUC (S3 vs best unimodal) = {sign}{delta_auc:.4f}")
+        print(f"\n  dAUC (S3 vs best unimodal) = {sign}{delta_auc:.4f}")
         if delta_auc > 0:
-            print("  → Multimodal fusion outperforms unimodal baselines.")
+            print("  -> Multimodal fusion outperforms unimodal baselines.")
         else:
-            print("  → Multimodal fusion does NOT improve over best unimodal baseline.")
+            print("  -> Multimodal fusion does NOT improve over best unimodal baseline.")
+
+        # ── DeLong significance test (paired, same test set) ─────────
+        if predictions and all(s in predictions for s in ("S1", "S2", "S3")):
+            print(f"\n[Stats] DeLong test - H0: AUC_S3 == AUC_baseline")
+            _, labels3 = predictions["S3"]
+            delong_out = {}
+            for base in ("S1", "S2"):
+                d = delong_test(
+                    predictions["S3"][0], predictions[base][0], labels3
+                )
+                delong_out[f"S3_vs_{base}"] = d
+                star = "*" if d["p_value"] < 0.05 else " "
+                print(f"  S3 vs {base}:  dAUC = {d['delta_auc']:+.4f}  "
+                      f"z = {d['z']:+.3f}  p = {d['p_value']:.4g} {star}")
+            print("  (* p < 0.05; predictions must come from the same test set)")
+            stats_out["delong"] = delong_out
+
+    return stats_out

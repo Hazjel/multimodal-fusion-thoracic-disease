@@ -41,7 +41,7 @@ def run_training(scenario: str, train_loader, val_loader, test_loader, pos_weigh
     model = train(model, train_loader, val_loader, pos_weights, scenario, DEVICE)
 
     # Save scaler (needed for inference/XAI)
-    if scenario in ("S1", "S3"):
+    if scenario in ("S1", "S3", "S3-gated", "S3-attn"):
         scaler_path = cfg.paths.checkpoint_dir / "scaler.pkl"
         save_scaler(scaler, scaler_path)
 
@@ -55,7 +55,7 @@ def run_evaluation(scenario: str, model, test_loader):
         probs, labels, scenario,
         cfg.paths.figures_dir / f"roc_{scenario.lower()}.png",
     )
-    return metrics
+    return metrics, (probs, labels)
 
 
 def run_xai(model, train_ds, test_loader):
@@ -140,16 +140,46 @@ def run_xai(model, train_ds, test_loader):
         cam_images[:n_cam], cam_heatmaps[:n_cam], cam_titles[:n_cam],
         cfg.paths.xai_dir / "gradcam_grid.png",
     )
+
+    # ── Complementarity analysis (joint SHAP + Grad-CAM reading) ──────
+    print("[XAI] Running SHAP<->Grad-CAM complementarity analysis...")
+    from src.xai.complementarity import (
+        analyze_complementarity, save_per_sample_csv,
+        plot_complementarity_scatter, print_summary,
+    )
+    comp = analyze_complementarity(
+        model, test_loader, explainer, target_layer, DEVICE,
+        n_samples=200, shap_nsamples=128,
+    )
+    save_per_sample_csv(comp, cfg.paths.xai_dir / "complementarity.csv")
+    plot_complementarity_scatter(comp, cfg.paths.xai_dir / "complementarity_scatter.png")
+    print_summary(comp)
     print("[XAI] Done.")
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--scenario", default="all",
-                        choices=["S1", "S2", "S3", "all"])
+                        choices=["S1", "S2", "S3", "S3-gated", "S3-attn", "all"],
+                        help="S3-gated/S3-attn: exploratory fusion variants of S3, "
+                             "not part of 'all' (see architectures.py)")
     parser.add_argument("--xai-only", action="store_true",
                         help="Skip training, load existing S3 checkpoint for XAI")
+    parser.add_argument("--cv", type=int, default=0, metavar="K",
+                        help="Run K-fold patient-level CV on the training pool "
+                             "instead of a single split (e.g. --cv 5)")
     args = parser.parse_args()
+
+    if args.cv and args.cv > 1:
+        from src.training.cv import run_cross_validation, compare_cv_scenarios
+        target = SCENARIOS if args.scenario == "all" else [args.scenario]
+        cv_results = {}
+        for sc in target:
+            cv_results[sc] = run_cross_validation(sc, k=args.cv, device=DEVICE)
+        if len(cv_results) > 1:
+            compare_cv_scenarios(cv_results)
+        print("\n[Done] Cross-validation complete.")
+        return
 
     print(f"[Setup] Device: {DEVICE}")
     if DEVICE.type == "cuda":
@@ -164,6 +194,7 @@ def main():
 
     target_scenarios = SCENARIOS if args.scenario == "all" else [args.scenario]
     all_results = {}
+    all_preds = {}
 
     for scenario in target_scenarios:
         ckpt_path = cfg.paths.checkpoint_dir / f"model_{scenario.lower()}_best.pt"
@@ -179,14 +210,15 @@ def main():
                 scenario, train_loader, val_loader, test_loader, pos_weights, scaler
             )
 
-        metrics = run_evaluation(scenario, model, test_loader)
+        metrics, preds = run_evaluation(scenario, model, test_loader)
         all_results[scenario] = metrics
+        all_preds[scenario] = preds
 
         if scenario == "S3":
             run_xai(model, train_ds, test_loader)
 
     if len(all_results) > 1:
-        compare_scenarios(all_results)
+        compare_scenarios(all_results, predictions=all_preds)
 
     print("\n[Done] All experiments complete.")
     print(f"       Results saved to: {cfg.paths.results_dir}")

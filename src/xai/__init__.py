@@ -43,7 +43,7 @@ def build_shap_background(
 def save_shap_background(background: np.ndarray, path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     np.save(path, background)
-    print(f"[XAI] SHAP background ({len(background)} samples) saved → {path}")
+    print(f"[XAI] SHAP background ({len(background)} samples) saved -> {path}")
 
 
 def load_shap_background(path: Path) -> np.ndarray:
@@ -103,7 +103,7 @@ def plot_shap_summary(
     plt.tight_layout()
     plt.savefig(save_path, dpi=150, bbox_inches="tight")
     plt.close()
-    print(f"[XAI] SHAP summary plot saved → {save_path}")
+    print(f"[XAI] SHAP summary plot saved -> {save_path}")
 
 
 def plot_shap_waterfall(
@@ -125,7 +125,7 @@ def plot_shap_waterfall(
     plt.tight_layout()
     plt.savefig(save_path, dpi=150, bbox_inches="tight")
     plt.close()
-    print(f"[XAI] SHAP waterfall saved → {save_path}")
+    print(f"[XAI] SHAP waterfall saved -> {save_path}")
 
 
 # ── Grad-CAM ──────────────────────────────────────────────────────────────────
@@ -247,4 +247,4 @@ def plot_gradcam_grid(
     save_path.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(save_path, dpi=150, bbox_inches="tight")
     plt.close(fig)
-    print(f"[XAI] Grad-CAM grid saved → {save_path}")
+    print(f"[XAI] Grad-CAM grid saved -> {save_path}")

@@ -1,2 +1,2 @@
-Skenario,Model,Input,Accuracy,F1 (Binary),F1 (Macro),AUC-ROC,Best Epoch,Best Val AUC
-S1,MLP Tabular,Tabular (4 fitur),0.6559,0.7659,0.5586,0.6185,8,0.6303
+accuracy,precision,recall,f1,auc_roc
+0.6470542272230035,0.6694310998735777,0.8413091833492214,0.7455927907631653,0.6181915985229325

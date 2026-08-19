@@ -1,2 +1,2 @@
-Skenario,Model,Input,Accuracy,F1 (Binary),F1 (Macro),AUC-ROC,Best Epoch,Best Val AUC
-S2,DenseNet-121,Gambar X-ray (224×224),0.7318,0.8022,0.693,0.7455,4,0.7897
+accuracy,precision,recall,f1,auc_roc
+0.7300750117205813,0.7263076923076923,0.900095328884652,0.8039165602383993,0.7442133001759088

@@ -1,0 +1,2 @@
+Skenario,Model,Input,Accuracy,F1 (Binary),F1 (Macro),AUC-ROC,Best Epoch,Best Val AUC
+S2-resnet,ResNet-50 (ImageNet pretrain),Gambar X-ray (224×224),0.7033,0.7811,0.6604,0.713,11,0.7621

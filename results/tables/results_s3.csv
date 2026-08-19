@@ -1,2 +1,2 @@
-Skenario,Model,Input,Output,Accuracy,F1 (Binary),F1 (Macro),AUC-ROC
-S3,Multimodal Fusion,Tabular + Gambar,Biner,0.7328,0.8036,0.6931,0.7449
+accuracy,precision,recall,f1,auc_roc
+0.7298015314892952,0.726814464276529,0.897998093422307,0.8033886740959745,0.7438672282573336
