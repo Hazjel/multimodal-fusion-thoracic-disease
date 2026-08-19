@@ -33,6 +33,7 @@ from src.protocol.contracts import (
     semantic_config_hash,
 )
 from src.protocol.environment import collect_environment, environment_hash
+from src.protocol.execution_environment import ensure_stage_environment
 from src.protocol.registry import upsert_registry
 from src.protocol.stages import load_frozen_protocol, oof_path_for
 from src.training.cv import run_cross_validation
@@ -110,7 +111,16 @@ def _run_pytabkit_model(
     protocol_hash_value = protocol["protocol_hash"]
     implementation = git_commit(cfg.paths.project_root)
     environment = collect_environment(implementation)
+    environment["execution_device"] = device
     environment_hash_value = environment_hash(environment)
+    ensure_stage_environment(
+        protocol_dir=protocol_dir,
+        stage="C1",
+        protocol_hash=protocol_hash_value,
+        environment_hash=environment_hash_value,
+        environment=environment,
+        implementation_commit=implementation,
+    )
     pytabkit_version = version("pytabkit")
 
     image_index = build_image_index(cfg.paths.image_dirs)
@@ -270,6 +280,7 @@ def run_tabular_benchmark(
                 backbone_name="canonical_mlp",
                 pretraining="not_applicable",
                 feature_set="D",
+                device=torch.device(pytab_device),
             )
         else:
             summaries[model_name] = _run_pytabkit_model(

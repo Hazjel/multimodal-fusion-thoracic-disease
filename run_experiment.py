@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 
 from configs.config import cfg
+from src.protocol.chexnet import write_chexnet_provenance_audit
 from src.protocol.freeze import freeze_protocol
 from src.protocol.stages import load_model_lock, oof_path_for, stage_status
 from src.training.cv import run_cross_validation
@@ -61,6 +62,12 @@ def _parser() -> argparse.ArgumentParser:
     select = subcommands.add_parser("select", help="Apply frozen C3 model-selection rule")
     _add_protocol_dir(select)
 
+    audit_chexnet = subcommands.add_parser(
+        "audit-chexnet", help="Audit conditional CheXNet checkpoint provenance"
+    )
+    _add_protocol_dir(audit_chexnet)
+    audit_chexnet.add_argument("--declaration", type=Path, default=None)
+
     main = subcommands.add_parser("main", help="Run C4 locked S1/S2/S3 experiments")
     _add_protocol_dir(main)
     main.add_argument("--scenario", choices=["all", "S1", "S2", "S3"], default="all")
@@ -99,6 +106,13 @@ def main() -> int:
     protocol_dir = _protocol_dir(args)
     if args.command == "status":
         print(json.dumps(stage_status(protocol_dir), indent=2, sort_keys=True))
+        return 0
+    if args.command == "audit-chexnet":
+        audit = write_chexnet_provenance_audit(
+            protocol_dir=protocol_dir,
+            declaration_path=args.declaration,
+        )
+        print(json.dumps(audit, indent=2, sort_keys=True, default=str))
         return 0
     if args.command == "benchmark-tabular":
         models = TABULAR_MODELS if args.model == "all" else (args.model,)

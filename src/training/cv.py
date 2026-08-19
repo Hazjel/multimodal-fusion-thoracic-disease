@@ -24,11 +24,13 @@ from src.evaluation import (
 from src.models.architectures import build_model, image_initial_hashes
 from src.protocol.contracts import (
     atomic_write_json,
+    file_sha256,
     git_commit,
     read_json,
     semantic_config_hash,
 )
 from src.protocol.environment import collect_environment, environment_hash
+from src.protocol.execution_environment import ensure_stage_environment
 from src.protocol.registry import upsert_registry
 from src.protocol.stages import (
     load_frozen_protocol,
@@ -72,10 +74,18 @@ def run_cross_validation(
     protocol = load_frozen_protocol(protocol_dir)
     protocol_hash_value = protocol["protocol_hash"]
     implementation = git_commit(cfg.paths.project_root)
-    environment = collect_environment(implementation)
-    environment_hash_value = environment_hash(environment)
     device = device or torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
+    environment = collect_environment(implementation)
+    environment["execution_device"] = str(device)
+    environment_hash_value = environment_hash(environment)
+    ensure_stage_environment(
+        protocol_dir=protocol_dir,
+        stage=stage,
+        protocol_hash=protocol_hash_value,
+        environment_hash=environment_hash_value,
+        environment=environment,
+        implementation_commit=implementation,
+    )
     image_index = build_image_index(cfg.paths.image_dirs)
     metadata = load_and_prepare_metadata(cfg.paths.csv_path, image_index)
     training_pool = load_official_training_pool(
@@ -123,6 +133,11 @@ def run_cross_validation(
             "fold": fold,
             "runtime": cfg.scientific_runtime_values(),
         }
+        if pretraining == "chexnet":
+            from src.protocol.chexnet import chexnet_audit_path
+            resolved["chexnet_provenance_audit_hash"] = file_sha256(
+                chexnet_audit_path(protocol_dir)
+            )
         semantic_hash = semantic_config_hash(
             protocol_hash_value=protocol_hash_value,
             selected_architecture=backbone_name if scenario != "S1" else "canonical_mlp",
@@ -156,6 +171,9 @@ def run_cross_validation(
             "backbone": backbone_name,
             "pretraining": pretraining,
             "initial_image_hashes": initial_hashes,
+            "chexnet_provenance_audit_hash": resolved.get(
+                "chexnet_provenance_audit_hash"
+            ),
         }
         model = train(
             model,

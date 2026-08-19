@@ -68,12 +68,23 @@ python run_experiment.py status
 python run_experiment.py benchmark-tabular --model all
 python run_experiment.py screen-image --backbone all --pretraining imagenet
 python run_experiment.py select
+# Hanya jika select menghasilkan kandidat DenseNet:
+Copy-Item docs/chexnet_provenance_declaration.example.json docs/chexnet_provenance_declaration.json
+# Isi declaration berdasarkan bukti yang dapat diverifikasi, lalu:
+python run_experiment.py audit-chexnet --declaration docs/chexnet_provenance_declaration.json
+# Jalankan CheXNet hanya bila audit berstatus APPROVED, kemudian select ulang.
+python run_experiment.py screen-image --backbone densenet121 --pretraining chexnet
+python run_experiment.py select
 python run_experiment.py main --scenario all
 python run_experiment.py ablate --scenario both --feature-set all
 ```
 
 `main` dan `ablate` hard-fail sebelum `model_lock.json` tersedia. Conditional
-CheXNet hanya dapat dijalankan setelah C3 memilih kandidat DenseNet-121.
+CheXNet hanya dapat dijalankan setelah C3 memilih kandidat DenseNet-121 dan
+`chexnet_provenance_audit.json` berstatus `APPROVED`. Deklarasi yang tidak dapat
+membuktikan sumber, split, preprocessing, label mapping, dan non-use official
+NIH test menghasilkan status `EXCLUDED`; C3 kemudian mengunci ImageNet tanpa
+menjalankan CheXNet canonical.
 
 ## Guardrail
 
@@ -84,6 +95,8 @@ CheXNet hanya dapat dijalankan setelah C3 memilih kandidat DenseNet-121.
 - C1–C6 hanya membaca `train_val_list.txt`, bukan `test_list.txt`.
 - Resume menyimpan RNG global dan state generator DataLoader; worker tidak
   dibuat persistent agar restart dapat direproduksi.
+- Run pertama setiap stage mengunci `environment_hash`. Seluruh fold/kandidat
+  C2 harus memakai environment yang sama; C3 menolak registry yang berbeda.
 - Official test diblokir sebelum C7.
 - CheXNet yang gagal dimuat tidak pernah fallback diam-diam.
 - Aplikasi C7 harus menampilkan **skor model**, bukan probabilitas terkalibrasi.

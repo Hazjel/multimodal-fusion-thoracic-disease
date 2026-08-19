@@ -49,3 +49,8 @@ digunakan sebagai bukti penelitian:
 4. Implementation bug-fix mengubah `implementation_commit` dan semantic hash,
    bukan scientific protocol hash.
 5. Hasil canonical dan exploratory tidak boleh dicampur dalam tabel utama.
+6. Seluruh kandidat/fold C2 harus cocok dengan satu `environment_lock.json`;
+   C3 menolak evidence dengan environment hash berbeda.
+7. CheXNet hanya boleh menjadi canonical bila executable provenance audit
+   berstatus `APPROVED`. Status `EXCLUDED` membuat C3 menggunakan ImageNet
+   tanpa menjalankan comparison CheXNet.

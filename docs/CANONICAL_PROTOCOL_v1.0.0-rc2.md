@@ -6,6 +6,14 @@
 > Patch implementasi setelah freeze wajib mempertahankan hash ini dan
 > menjalankan C0 ulang pada implementation commit baru.
 
+Implementation enforcement setelah freeze:
+
+- C2 membuat satu `environment_lock.json`; seluruh fold dan kandidat harus
+  memiliki environment hash yang sama sebelum C3 membandingkan wall time.
+- Conditional CheXNet memerlukan `chexnet_provenance_audit.json` berstatus
+  `APPROVED`. Audit menghitung keputusan dari bukti sumber, dataset/split,
+  preprocessing, label mapping, official-test usage, dan checksum checkpoint.
+
 Status: **FINAL research design / freeze candidate**. The protocol becomes
 `v1.0.0 — FROZEN` only after C0 passes and immutable artifacts are generated.
 

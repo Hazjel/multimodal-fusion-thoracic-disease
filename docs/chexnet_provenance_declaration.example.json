@@ -1,0 +1,31 @@
+{
+  "source_url": "https://github.com/OWNER/REPOSITORY",
+  "source_commit": "0000000000000000000000000000000000000000",
+  "training_dataset": "NIH ChestX-ray14",
+  "training_split_provenance": "Replace with exact source train/validation/test manifest provenance and checksums.",
+  "preprocessing": {
+    "resize_or_crop": "Replace with source pipeline",
+    "normalization": "Replace with source pipeline"
+  },
+  "label_mapping": [
+    "Atelectasis",
+    "Cardiomegaly",
+    "Consolidation",
+    "Edema",
+    "Effusion",
+    "Emphysema",
+    "Fibrosis",
+    "Hernia",
+    "Infiltration",
+    "Mass",
+    "Nodule",
+    "Pleural_Thickening",
+    "Pneumonia",
+    "Pneumothorax"
+  ],
+  "official_nih_test_usage": "UNKNOWN",
+  "evidence_urls": [
+    "https://github.com/OWNER/REPOSITORY/blob/COMMIT/README.md"
+  ],
+  "reviewed_by": "Replace with reviewer name"
+}

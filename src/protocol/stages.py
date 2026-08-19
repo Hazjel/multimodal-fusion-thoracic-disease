@@ -116,6 +116,8 @@ def validate_cv_request(
             candidate = read_json(candidate_path)
             if candidate.get("selected_backbone") != "densenet121":
                 raise StageGateError("CheXNet comparison is not authorized for this candidate")
+            from src.protocol.chexnet import require_approved_chexnet_audit
+            require_approved_chexnet_audit(protocol_dir)
             return
         raise StageGateError("C2 pretraining request violates the frozen policy")
     if stage in {"C4", "C5"}:
@@ -165,6 +167,7 @@ def stage_status(protocol_dir: Path) -> Dict[str, Any]:
     root = Path(protocol_dir)
     image_dir = root / "screening" / "image"
     tabular_dir = root / "screening" / "tabular"
+    chexnet_audit = image_dir / "chexnet_provenance_audit.json"
     return {
         "protocol_hash": protocol["protocol_hash"],
         "status": protocol["status"],
@@ -172,6 +175,10 @@ def stage_status(protocol_dir: Path) -> Dict[str, Any]:
         "C2_imagenet_complete": all(
             (image_dir / f"{name}-imagenet-oof.csv").exists()
             for name in cfg.model.image_candidates
+        ),
+        "C2_environment_locked": (image_dir / "environment_lock.json").exists(),
+        "CheXNet_provenance_status": (
+            read_json(chexnet_audit).get("status") if chexnet_audit.exists() else "NOT_AUDITED"
         ),
         "C3_model_locked": (root / "model_lock.json").exists(),
         "C4_main_complete": (root / "main" / "_SUCCESS").exists(),

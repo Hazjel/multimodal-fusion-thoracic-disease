@@ -26,6 +26,15 @@ from src.protocol.contracts import (
     semantic_config_hash,
 )
 from src.protocol.environment import environment_hash
+from src.protocol.execution_environment import (
+    EnvironmentConsistencyError,
+    assert_registered_runs_match_environment,
+    ensure_stage_environment,
+)
+from src.protocol.chexnet import (
+    SAFE_OFFICIAL_TEST_VALUE,
+    evaluate_provenance_declaration,
+)
 from src.protocol.guards import OfficialTestAccessError, assert_official_test_access
 from src.protocol.manifests import (
     audit_manifests,
@@ -38,6 +47,7 @@ from src.protocol.stages import (
     load_frozen_protocol,
     validate_cv_request,
 )
+from src.protocol.registry import upsert_registry
 
 
 class ProtocolIdentityTests(unittest.TestCase):
@@ -115,7 +125,7 @@ class ProtocolIdentityTests(unittest.TestCase):
     def test_stage_gate_blocks_main_before_model_lock(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            self._frozen_fixture(root)
+            protocol = self._frozen_fixture(root)
             validate_cv_request(
                 stage="C2",
                 scenario="S2",
@@ -124,6 +134,21 @@ class ProtocolIdentityTests(unittest.TestCase):
                 feature_set="D",
                 protocol_dir=root,
             )
+            candidate_path = root / "screening" / "image" / "model_lock_candidate.json"
+            atomic_write_json(candidate_path, {
+                "status": "CHEXNET_AUDIT_REQUIRED",
+                "protocol_hash": protocol["protocol_hash"],
+                "selected_backbone": "densenet121",
+            })
+            with self.assertRaises(StageGateError):
+                validate_cv_request(
+                    stage="C2",
+                    scenario="S2",
+                    backbone="densenet121",
+                    pretraining="chexnet",
+                    feature_set="D",
+                    protocol_dir=root,
+                )
             with self.assertRaises(StageGateError):
                 validate_cv_request(
                     stage="C4",
@@ -133,6 +158,78 @@ class ProtocolIdentityTests(unittest.TestCase):
                     feature_set="D",
                     protocol_dir=root,
                 )
+
+    def test_stage_environment_lock_rejects_mixed_c2_runs(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            protocol = self._frozen_fixture(root)
+            environment = {"gpu": "test-gpu", "packages": {"torch": "test"}}
+            ensure_stage_environment(
+                protocol_dir=root,
+                stage="C2",
+                protocol_hash=protocol["protocol_hash"],
+                environment_hash="environment-a",
+                environment=environment,
+                implementation_commit="commit-a",
+            )
+            ensure_stage_environment(
+                protocol_dir=root,
+                stage="C2",
+                protocol_hash=protocol["protocol_hash"],
+                environment_hash="environment-a",
+                environment=environment,
+                implementation_commit="commit-b",
+            )
+            with self.assertRaises(EnvironmentConsistencyError):
+                ensure_stage_environment(
+                    protocol_dir=root,
+                    stage="C2",
+                    protocol_hash=protocol["protocol_hash"],
+                    environment_hash="environment-b",
+                    environment=environment,
+                    implementation_commit="commit-c",
+                )
+
+            upsert_registry(root / "experiment_registry.csv", {
+                "run_id": "good-run",
+                "phase": "C2",
+                "environment_hash": "environment-a",
+            })
+            self.assertEqual(
+                assert_registered_runs_match_environment(
+                    protocol_dir=root, stage="C2", run_ids=["good-run"]
+                ),
+                "environment-a",
+            )
+            upsert_registry(root / "experiment_registry.csv", {
+                "run_id": "bad-run",
+                "phase": "C2",
+                "environment_hash": "environment-b",
+            })
+            with self.assertRaises(EnvironmentConsistencyError):
+                assert_registered_runs_match_environment(
+                    protocol_dir=root, stage="C2", run_ids=["good-run", "bad-run"]
+                )
+
+    def test_chexnet_provenance_decision_is_computed_not_trusted(self):
+        declaration = {
+            "source_url": "https://example.org/repository",
+            "source_commit": "a" * 40,
+            "training_dataset": "NIH ChestX-ray14",
+            "training_split_provenance": "Patient-disjoint source train and validation manifests.",
+            "preprocessing": {"resize": 224, "normalization": "documented"},
+            "label_mapping": list(base_cfg.data.label_names),
+            "official_nih_test_usage": SAFE_OFFICIAL_TEST_VALUE,
+            "evidence_urls": ["https://example.org/evidence"],
+            "reviewed_by": "Supervisor",
+        }
+        status, reasons = evaluate_provenance_declaration(declaration)
+        self.assertEqual(status, "APPROVED")
+        self.assertEqual(reasons, [])
+        declaration["official_nih_test_usage"] = "UNKNOWN"
+        status, reasons = evaluate_provenance_declaration(declaration)
+        self.assertEqual(status, "EXCLUDED")
+        self.assertTrue(any("test" in reason.lower() for reason in reasons))
 
 
 class DataContractTests(unittest.TestCase):
