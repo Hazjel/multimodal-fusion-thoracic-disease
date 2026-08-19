@@ -10,6 +10,9 @@ Implementation enforcement setelah freeze:
 
 - C2 membuat satu `environment_lock.json`; seluruh fold dan kandidat harus
   memiliki environment hash yang sama sebelum C3 membandingkan wall time.
+- CUDA canonical execution mewajibkan
+  `CUBLAS_WORKSPACE_CONFIG=:4096:8`; nilai aktual direkam dalam environment
+  provenance dan mismatch menghasilkan hard error sebelum training.
 - Conditional CheXNet memerlukan `chexnet_provenance_audit.json` berstatus
   `APPROVED`. Audit menghitung keputusan dari bukti sumber, dataset/split,
   preprocessing, label mapping, official-test usage, dan checksum checkpoint.

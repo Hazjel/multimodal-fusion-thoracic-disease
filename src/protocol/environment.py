@@ -12,6 +12,7 @@ from typing import Any, Dict, Iterable
 import torch
 
 from src.protocol.contracts import canonical_json_bytes, sha256_bytes
+from src.protocol.cuda_reproducibility import CUBLAS_WORKSPACE_ENV
 
 
 PACKAGES = (
@@ -42,6 +43,7 @@ def collect_environment(implementation_commit: str) -> Dict[str, Any]:
         "gpu": gpu,
         "determinism": {
             "base_seed": 42,
+            "cublas_workspace_config": os.environ.get(CUBLAS_WORKSPACE_ENV),
             "cudnn_deterministic": True,
             "cudnn_benchmark": False,
             "deterministic_algorithms": True,

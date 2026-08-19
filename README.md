@@ -97,6 +97,8 @@ menjalankan CheXNet canonical.
   dibuat persistent agar restart dapat direproduksi.
 - Run pertama setiap stage mengunci `environment_hash`. Seluruh fold/kandidat
   C2 harus memakai environment yang sama; C3 menolak registry yang berbeda.
+- Entry point menetapkan `CUBLAS_WORKSPACE_CONFIG=:4096:8` sebelum CUDA dipakai,
+  mencatatnya pada environment hash, dan memblokir nilai yang berbeda.
 - Official test diblokir sebelum C7.
 - CheXNet yang gagal dimuat tidak pernah fallback diam-diam.
 - Aplikasi C7 harus menampilkan **skor model**, bukan probabilitas terkalibrasi.

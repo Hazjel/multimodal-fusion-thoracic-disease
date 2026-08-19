@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import tempfile
 import unittest
 import json
@@ -24,6 +25,12 @@ from src.protocol.contracts import (
     file_sha256,
     protocol_hash,
     semantic_config_hash,
+)
+from src.protocol.cuda_reproducibility import (
+    CANONICAL_CUBLAS_WORKSPACE_CONFIG,
+    CUBLAS_WORKSPACE_ENV,
+    configure_cublas_workspace,
+    require_cublas_workspace,
 )
 from src.protocol.environment import environment_hash
 from src.protocol.execution_environment import (
@@ -51,6 +58,27 @@ from src.protocol.registry import upsert_registry
 
 
 class ProtocolIdentityTests(unittest.TestCase):
+    def test_canonical_cublas_workspace_is_configured_and_guarded(self):
+        with patch.dict(os.environ, {}, clear=False):
+            os.environ.pop(CUBLAS_WORKSPACE_ENV, None)
+            configured = configure_cublas_workspace()
+            self.assertEqual(configured, CANONICAL_CUBLAS_WORKSPACE_CONFIG)
+            self.assertEqual(
+                os.environ[CUBLAS_WORKSPACE_ENV],
+                CANONICAL_CUBLAS_WORKSPACE_CONFIG,
+            )
+            require_cublas_workspace("cuda")
+
+        with patch.dict(os.environ, {CUBLAS_WORKSPACE_ENV: ":16:8"}):
+            with self.assertRaises(RuntimeError):
+                configure_cublas_workspace()
+
+        with patch.dict(os.environ, {}, clear=False):
+            os.environ.pop(CUBLAS_WORKSPACE_ENV, None)
+            with self.assertRaises(RuntimeError):
+                require_cublas_workspace("cuda")
+            require_cublas_workspace("cpu")
+
     def test_protocol_hash_excludes_implementation(self):
         scientific = {"task": "binary", "folds": 5}
         first = protocol_hash(scientific)

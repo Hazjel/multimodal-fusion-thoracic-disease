@@ -29,6 +29,10 @@ from src.protocol.contracts import (
     read_json,
     semantic_config_hash,
 )
+from src.protocol.cuda_reproducibility import (
+    configure_cublas_workspace,
+    require_cublas_workspace,
+)
 from src.protocol.environment import collect_environment, environment_hash
 from src.protocol.execution_environment import ensure_stage_environment
 from src.protocol.registry import upsert_registry
@@ -75,6 +79,8 @@ def run_cross_validation(
     protocol_hash_value = protocol["protocol_hash"]
     implementation = git_commit(cfg.paths.project_root)
     device = device or torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    configure_cublas_workspace()
+    require_cublas_workspace(device)
     environment = collect_environment(implementation)
     environment["execution_device"] = str(device)
     environment_hash_value = environment_hash(environment)

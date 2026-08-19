@@ -7,6 +7,11 @@ import subprocess
 import sys
 from pathlib import Path
 
+# This must run before imports that load torch and before any CUDA operation.
+from src.protocol.cuda_reproducibility import configure_cublas_workspace
+
+configure_cublas_workspace()
+
 from configs.config import cfg
 from src.protocol.chexnet import write_chexnet_provenance_audit
 from src.protocol.freeze import freeze_protocol

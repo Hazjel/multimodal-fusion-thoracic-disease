@@ -18,9 +18,12 @@ from torch.utils.data import DataLoader
 
 from configs.config import cfg
 from src.protocol.contracts import atomic_write_json
+from src.protocol.cuda_reproducibility import configure_cublas_workspace
 
 
 def configure_determinism(seed: int = 42) -> None:
+    # Configure before manual_seed_all can initialize CUDA/cuBLAS state.
+    configure_cublas_workspace()
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
