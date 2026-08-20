@@ -14,7 +14,13 @@ from torch.utils.data import DataLoader, Dataset
 
 from configs.config import cfg as base_cfg
 from src.models.architectures import TabularMLP
-from src.training import capture_rng_state, restore_rng_state, train
+from src.training import (
+    capture_dataloader_state,
+    capture_rng_state,
+    restore_dataloader_state,
+    restore_rng_state,
+    train,
+)
 from src.xai import build_shap_background, make_shap_explainer, proportional_oof_indices
 
 
@@ -180,6 +186,26 @@ class TrainingAndXAITests(unittest.TestCase):
         restore_rng_state(state)
         actual = torch.rand(3)
         self.assertTrue(torch.equal(expected, actual))
+
+    @unittest.skipUnless(torch.cuda.is_available(), "CUDA is required")
+    def test_rng_and_dataloader_resume_accept_cuda_mapped_checkpoint_states(self):
+        """Regression: map_location='cuda' must not break CPU RNG restoration."""
+        rng_state = capture_rng_state()
+        cuda_mapped_rng = dict(rng_state)
+        cuda_mapped_rng["torch_cpu"] = rng_state["torch_cpu"].cuda()
+        cuda_mapped_rng["torch_cuda"] = [
+            value.cuda() for value in rng_state["torch_cuda"]
+        ]
+        restore_rng_state(cuda_mapped_rng)
+
+        train_loader, validation_loader = self._loaders()
+        loader_state = capture_dataloader_state(train_loader, validation_loader)
+        cuda_mapped_loaders = {
+            name: value.cuda() for name, value in loader_state.items()
+        }
+        restore_dataloader_state(
+            cuda_mapped_loaders, train_loader, validation_loader
+        )
 
     def test_shap_background_is_scaled_and_image_conditioned(self):
         dataset = TinyTabularDataset()

@@ -146,12 +146,27 @@ def capture_rng_state() -> Dict[str, Any]:
     }
 
 
+def _cpu_byte_rng_state(value: Any, *, name: str) -> torch.Tensor:
+    """Normalize RNG state after a checkpoint was mapped to a CUDA device."""
+    if not isinstance(value, torch.Tensor) or value.dtype != torch.uint8:
+        raise TypeError(f"{name} must be a torch.uint8 Tensor")
+    return value.detach().to(device="cpu").contiguous()
+
+
 def restore_rng_state(state: Mapping[str, Any]) -> None:
     random.setstate(state["python"])
     np.random.set_state(state["numpy"])
-    torch.set_rng_state(state["torch_cpu"])
+    torch.set_rng_state(
+        _cpu_byte_rng_state(state["torch_cpu"], name="torch_cpu RNG state")
+    )
     if torch.cuda.is_available() and state.get("torch_cuda") is not None:
-        torch.cuda.set_rng_state_all(state["torch_cuda"])
+        cuda_states = state["torch_cuda"]
+        if not isinstance(cuda_states, (list, tuple)):
+            raise TypeError("torch_cuda RNG state must be a list or tuple")
+        torch.cuda.set_rng_state_all([
+            _cpu_byte_rng_state(value, name=f"torch_cuda RNG state {index}")
+            for index, value in enumerate(cuda_states)
+        ])
 
 
 def capture_dataloader_state(
@@ -180,8 +195,16 @@ def restore_dataloader_state(
 ) -> None:
     if train_loader.generator is None or val_loader.generator is None:
         raise RuntimeError("Cannot restore DataLoader state without explicit generators")
-    train_loader.generator.set_state(state["train_generator"])
-    val_loader.generator.set_state(state["validation_generator"])
+    train_loader.generator.set_state(
+        _cpu_byte_rng_state(
+            state["train_generator"], name="training DataLoader RNG state"
+        )
+    )
+    val_loader.generator.set_state(
+        _cpu_byte_rng_state(
+            state["validation_generator"], name="validation DataLoader RNG state"
+        )
+    )
 
 
 def _atomic_torch_save(payload: Mapping[str, Any], path: Path) -> None:

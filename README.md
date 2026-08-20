@@ -94,7 +94,9 @@ menjalankan CheXNet canonical.
   setiap canonical run; mismatch menghasilkan hard error.
 - C1–C6 hanya membaca `train_val_list.txt`, bukan `test_list.txt`.
 - Resume menyimpan RNG global dan state generator DataLoader; worker tidak
-  dibuat persistent agar restart dapat direproduksi.
+  dibuat persistent agar restart dapat direproduksi. State RNG yang ikut
+  terpetakan ke CUDA saat checkpoint dimuat dinormalisasi kembali menjadi CPU
+  `ByteTensor` sebelum dipulihkan.
 - Run pertama setiap stage mengunci `environment_hash`. Seluruh fold/kandidat
   C2 harus memakai environment yang sama; C3 menolak registry yang berbeda.
 - Entry point menetapkan `CUBLAS_WORKSPACE_CONFIG=:4096:8` sebelum CUDA dipakai,

@@ -13,6 +13,8 @@ Implementation enforcement setelah freeze:
 - CUDA canonical execution mewajibkan
   `CUBLAS_WORKSPACE_CONFIG=:4096:8`; nilai aktual direkam dalam environment
   provenance dan mismatch menghasilkan hard error sebelum training.
+- Resume menormalisasi state RNG global dan generator DataLoader menjadi CPU
+  `torch.uint8` tensors sebelum memanggil API pemulihan RNG PyTorch.
 - Conditional CheXNet memerlukan `chexnet_provenance_audit.json` berstatus
   `APPROVED`. Audit menghitung keputusan dari bukti sumber, dataset/split,
   preprocessing, label mapping, official-test usage, dan checksum checkpoint.
