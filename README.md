@@ -76,6 +76,17 @@ BAB IV hanya boleh mengambil angka dari direktori protocol canonical yang
 memiliki registry valid, checksum, dan penanda `_SUCCESS` pada tahap terkait.
 Checkpoint biner tetap disimpan lokal dan tidak dipublikasikan ke GitHub.
 
+## Notebook
+
+Notebook sebelum protocol freeze dipertahankan sebagai riwayat, tetapi sudah
+dipisahkan menjadi `archive/pre_protocol/` dan `exploratory/`. Notebook tersebut
+tidak menjadi sumber angka canonical. Notebook baru di `canonical_reports/`
+nantinya hanya membaca CSV/JSON canonical untuk membuat tabel dan visualisasi;
+training tetap dijalankan melalui `run_experiment.py`.
+
+Indeks dan status setiap notebook tersedia di
+[notebooks/README.md](notebooks/README.md).
+
 ## Reproducibility dan guardrail
 
 - Scientific hash, runtime config, manifest split, dan environment diverifikasi
