@@ -1,0 +1,39 @@
+{
+  "created_at_utc": "2026-08-19T14:51:32.448080+00:00",
+  "environment": {
+    "cuda_available": true,
+    "cuda_runtime": "12.1",
+    "cudnn": 90100,
+    "determinism": {
+      "base_seed": 42,
+      "cublas_workspace_config": ":4096:8",
+      "cudnn_benchmark": false,
+      "cudnn_deterministic": true,
+      "deterministic_algorithms": true,
+      "warn_only": true
+    },
+    "execution_device": "cuda",
+    "gpu": "NVIDIA GeForce RTX 3060 Laptop GPU",
+    "implementation_commit": "f3181c9d7dbce55ba57e5f8cebf8347f9840cf29",
+    "os": "Windows-11-10.0.26200-SP0",
+    "packages": {
+      "Pillow": "12.3.0",
+      "matplotlib": "3.10.7",
+      "numpy": "2.4.3",
+      "opencv-python": "4.13.0.92",
+      "pandas": "2.3.1",
+      "pytabkit": "1.7.3",
+      "scikit-learn": "1.8.0",
+      "scipy": "1.17.1",
+      "shap": "0.51.0",
+      "torch": "2.5.1+cu121",
+      "torchvision": "0.20.1+cu121"
+    },
+    "python": "3.12.3 (tags/v3.12.3:f6650f9, Apr  9 2024, 14:05:25) [MSC v.1938 64 bit (AMD64)]"
+  },
+  "environment_hash": "8986d0e7f3809a317f6fb0c51882cbdc09da5b02b3e9ae3b7a6bb0984d861ed9",
+  "first_implementation_commit": "f3181c9d7dbce55ba57e5f8cebf8347f9840cf29",
+  "protocol_hash": "d42337690181f1054297f514934ad0c98bb718223bc06d8de5569f40a184ee32",
+  "stage": "C1",
+  "status": "LOCKED"
+}

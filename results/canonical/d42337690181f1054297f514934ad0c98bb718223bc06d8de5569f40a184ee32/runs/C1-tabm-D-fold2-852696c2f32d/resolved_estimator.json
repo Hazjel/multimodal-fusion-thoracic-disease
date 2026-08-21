@@ -1,0 +1,152 @@
+{
+  "device": "cuda",
+  "estimator_params": {
+    "arch_type": "tabm-mini",
+    "batch_size": 256,
+    "lr": 0.002,
+    "n_cv": 1,
+    "n_epochs": 100,
+    "n_refit": 0,
+    "num_emb_type": "none",
+    "patience": 16,
+    "random_state": 42,
+    "tabm_k": 32,
+    "val_metric_name": "cross_entropy"
+  },
+  "feature_set": "D",
+  "model": "tabm",
+  "pytabkit_version": "1.7.3",
+  "runtime": {
+    "data": {
+      "age_clip_max": 100,
+      "age_clip_min": 0,
+      "cv_splits": 5,
+      "deployment_splits": 10,
+      "deployment_validation_fold": 0,
+      "encoded_tabular_features": [
+        "Patient Age",
+        "gender_encoded",
+        "view_PA",
+        "Follow-up #"
+      ],
+      "gender_mapping": [
+        [
+          "F",
+          0
+        ],
+        [
+          "M",
+          1
+        ]
+      ],
+      "image_size": 224,
+      "label_names": [
+        "Atelectasis",
+        "Cardiomegaly",
+        "Consolidation",
+        "Edema",
+        "Effusion",
+        "Emphysema",
+        "Fibrosis",
+        "Hernia",
+        "Infiltration",
+        "Mass",
+        "Nodule",
+        "Pleural_Thickening",
+        "Pneumonia",
+        "Pneumothorax"
+      ],
+      "num_classes": 1,
+      "num_workers": 4,
+      "pin_memory": true,
+      "tabular_features": [
+        "Patient Age",
+        "Patient Gender",
+        "View Position",
+        "Follow-up #"
+      ],
+      "train_resize": 256,
+      "view_mapping": [
+        [
+          "AP",
+          0
+        ],
+        [
+          "PA",
+          1
+        ]
+      ]
+    },
+    "evaluation": {
+      "bootstrap_alpha": 0.05,
+      "bootstrap_replicates": 2000,
+      "calibration_bins": 10,
+      "calibration_strategy": "uniform",
+      "decision_threshold": 0.5,
+      "shap_background_size": 100,
+      "shap_samples_per_fold": 40
+    },
+    "model": {
+      "chexnet_expected_sha256": "3777d98828c693da2178650f91679deb9a1eb0f8a96f0f22f1c531d15df9b21d",
+      "fusion_dropout": 0.4,
+      "fusion_hidden_dims": [
+        256,
+        128
+      ],
+      "image_candidates": [
+        "densenet121",
+        "resnet50",
+        "efficientnet_b0"
+      ],
+      "image_dropout": 0.4,
+      "image_feature_dim": 512,
+      "tabular_dropout": 0.3,
+      "tabular_feature_dim": 128,
+      "tabular_hidden_dims": [
+        64,
+        128
+      ],
+      "tabular_input_dim": 4,
+      "weight_identifiers": [
+        [
+          "densenet121",
+          "DenseNet121_Weights.IMAGENET1K_V1"
+        ],
+        [
+          "resnet50",
+          "ResNet50_Weights.IMAGENET1K_V2"
+        ],
+        [
+          "efficientnet_b0",
+          "EfficientNet_B0_Weights.IMAGENET1K_V1"
+        ]
+      ]
+    },
+    "protocol_version": "1.0.0",
+    "training": {
+      "adam_betas": [
+        0.9,
+        0.999
+      ],
+      "adam_eps": 1e-08,
+      "amsgrad": false,
+      "batch_size": 16,
+      "checkpoint_metric": "roc_auc",
+      "early_stop_patience": 7,
+      "eval_batch_size": 32,
+      "gradient_accumulation_steps": 2,
+      "gradient_clip_norm": 1.0,
+      "lr_backbone": 0.0001,
+      "lr_fusion": 0.0005,
+      "lr_tabular": 0.001,
+      "num_epochs": 30,
+      "scheduler_factor": 0.5,
+      "scheduler_metric": "validation_loss",
+      "scheduler_patience": 3,
+      "seed": 42,
+      "use_amp": true,
+      "weight_decay": 1e-05
+    }
+  },
+  "stage": "C1"
+}
