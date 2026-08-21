@@ -22,7 +22,7 @@ matriks inti tidak berisi studi yang berulang.
 
 ## Matriks penelitian terdahulu
 
-| No. | Penelitian | Dataset dan task | Input non-citra | Metode/fusion | XAI dan evaluasi | Posisi terhadap TA |
+| No. | Penelitian | Dataset, Task & Evaluation Split | Input non-citra | Metode/fusion | Evaluasi & XAI | Keterbatasan dan Gap terhadap TA |
 |---:|---|---|---|---|---|---|
 | 1 | Hsieh et al. (2023), *MDF-Net for abnormality detection by fusing X-rays with clinical data*, Scientific Reports, [doi:10.1038/s41598-023-41463-0](https://doi.org/10.1038/s41598-023-41463-0) | MIMIC-Eye; abnormality localization lima kelas | Sepuluh clinical features | Mask R-CNN + MobileNetV3; dual 3-D/1-D fusion | Bounding-box localization dan ablation; AP meningkat 19.61% menjadi 31.69% | Bukti inti manfaat CXR + structured clinical data; task localization berbeda dari klasifikasi biner TA. |
 | 2 | Khader et al. (2023), *Multimodal Deep Learning for Integrating Chest Radiographs and Clinical Parameters: A Case for Transformers*, Radiology, [doi:10.1148/radiol.230806](https://doi.org/10.1148/radiol.230806) | MIMIC dan internal ICU; hingga 25 kondisi; patient-disjoint split | Vital signs, laboratory/time-series, dan clinical parameters | Vision Transformer dan transformer/cross-attention fusion; clinical-only, image-only, multimodal | MIMIC mean AUC 0.77 multimodal vs 0.70 image-only dan 0.72 clinical-only | Dasar kuat untuk controlled S1/S2/S3 dan patient-level evaluation. |
