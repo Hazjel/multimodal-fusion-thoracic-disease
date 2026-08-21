@@ -1,56 +1,60 @@
 # Status Artefak Penelitian
 
-Dokumen ini adalah sumber status untuk membedakan bukti canonical dari hasil
-pilot dan legacy.
+Dokumen ini menentukan status bukti penelitian dan mencegah pencampuran hasil
+canonical dengan eksperimen lama.
 
-## CANONICAL
+## Canonical
 
-- Canonical Execution Protocol **v1.0.0 — FROZEN**.
+- Protocol: **v1.0.0 — FROZEN**.
 - Scientific protocol hash:
   `d42337690181f1054297f514934ad0c98bb718223bc06d8de5569f40a184ee32`.
-- Manifest primary CV dan deployment split sudah immutable.
-- **Belum ada hasil canonical C1–C7.**
-- BAB IV hanya boleh mengambil angka dari direktori protocol hash di
-  `results/canonical/` setelah stage terkait memiliki `_SUCCESS` dan artifact
-  checksum/registry yang valid.
+- C0: **PASS**.
+- C1 tabular benchmark: **selesai**, 15/15 run.
+- C2 ImageNet screening: **selesai dan diaudit**, 15/15 run.
+- C3 model lock: **belum dibuat**.
+- C4–C7: **belum dimulai**.
 
-## PILOT / EXPLORATORY
+Hasil C1/C2 berada di
+[`canonical/d423.../`](canonical/d42337690181f1054297f514934ad0c98bb718223bc06d8de5569f40a184ee32/README.md).
+Aturan frozen C2 mengarah ke ResNet-50 ImageNet, tetapi keputusan operasional
+baru dianggap terkunci setelah C3 menghasilkan `model_lock.json` dan proses
+proposal amendment diselesaikan bersama pembimbing.
 
-Seluruh checkpoint, tabel, statistik, dan XAI S1/S2/S3 yang dibuat sebelum
-freeze diperlakukan sebagai pilot/exploratory. Artefak tersebut tetap berguna
-sebagai riwayat pengembangan, tetapi:
+BAB IV hanya boleh memakai angka dari direktori protocol aktif apabila tahap
+terkait memiliki `_SUCCESS`, schema prediksi valid, registry lengkap, serta
+checksum yang dapat diverifikasi.
 
-- tidak menjadi primary comparative evidence;
-- tidak boleh disebut hasil final BAB IV;
-- tidak boleh dipakai untuk mengubah kandidat atau hyperparameter frozen;
-- official-test metrics lama harus disertai disclosure prior exposure jika
-  dibahas sebagai konteks sekunder.
+## Exploratory
 
-Ini termasuk AUC lama S1/S2/S3, DeLong lama, attention/gated fusion,
-EfficientNet/ResNet lama, serta complementarity analysis lama.
+Artefak exploratory boleh digunakan untuk menjelaskan riwayat pengembangan,
+tetapi:
 
-## LEGACY
+- bukan primary comparative evidence;
+- tidak boleh dicampur ke tabel hasil canonical;
+- tidak boleh digunakan untuk mengubah kandidat atau hyperparameter frozen;
+- hasil official test lama harus disertai disclosure *prior exposure*.
 
-Artefak berikut tidak kompatibel dengan protocol canonical dan tidak boleh
-digunakan sebagai bukti penelitian:
+Kategori ini mencakup attention/gated fusion, eksperimen backbone lama,
+complementarity analysis lama, serta analisis tambahan di luar protocol.
+
+## Legacy
+
+Artefak berikut tidak kompatibel dengan protocol canonical:
 
 - row-level atau non-patient-grouped split;
-- arsitektur metadata tiga hidden layer yang sudah diganti;
+- arsitektur metadata lama;
 - S4 multi-label;
 - checkpoint dengan preprocessing, initialization, atau test policy lama;
 - silent fallback CheXNet atau artifact tanpa provenance yang dapat diaudit.
 
-## Aturan status
+## Aturan tahap
 
-1. C1 dan C2 hanya boleh dimulai setelah protocol berstatus `FROZEN`.
-2. C4/C5 hanya boleh berjalan setelah `model_lock.json` terbentuk dan proposal
-   amendment disetujui bila diwajibkan.
-3. C1–C6 tidak membaca official `test_list.txt`.
-4. Implementation bug-fix mengubah `implementation_commit` dan semantic hash,
-   bukan scientific protocol hash.
-5. Hasil canonical dan exploratory tidak boleh dicampur dalam tabel utama.
-6. Seluruh kandidat/fold C2 harus cocok dengan satu `environment_lock.json`;
-   C3 menolak evidence dengan environment hash berbeda.
-7. CheXNet hanya boleh menjadi canonical bila executable provenance audit
-   berstatus `APPROVED`. Status `EXCLUDED` membuat C3 menggunakan ImageNet
-   tanpa menjalankan comparison CheXNet.
+1. C1 dan C2 hanya berjalan setelah protocol berstatus `FROZEN`.
+2. C4 dan C5 hanya berjalan setelah `model_lock.json` tersedia.
+3. Proposal amendment diperlukan bila hasil frozen selection rule berbeda dari
+   metode pada proposal, tetapi tidak mengubah `protocol_hash`.
+4. Scientific protocol amendment menghasilkan versi dan hash baru; hasil
+   antarversi tidak dicampur.
+5. Implementation bug-fix mengubah implementation commit dan semantic config
+   hash, bukan scientific protocol hash; run terdampak wajib diulang.
+6. C1–C6 tidak boleh membaca official `test_list.txt`.
