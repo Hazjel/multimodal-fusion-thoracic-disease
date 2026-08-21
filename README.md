@@ -102,3 +102,7 @@ Indeks dan status setiap notebook tersedia di
 
 Spesifikasi ilmiah lengkap tersedia di
 [Canonical Execution Protocol v1.0.0-rc2](docs/CANONICAL_PROTOCOL_v1.0.0-rc2.md).
+
+Matriks sepuluh penelitian terdahulu, pemetaan literatur pendukung, koreksi
+klaim, dan formulasi research gap canonical tersedia di
+[Matriks Literatur Canonical](docs/LITERATURE_MATRIX.md).
