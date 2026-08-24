@@ -11,8 +11,8 @@ Position, dan Follow-up #.
 | C0 | **PASS** | Protocol v1.0.0 sudah dibekukan dan guardrail implementasi lulus |
 | C1 | **Selesai** | MLP, RealMLP, dan TabM; masing-masing 5 fold |
 | C2 | **Selesai dan diaudit** | DenseNet-121, ResNet-50, dan EfficientNet-B0; masing-masing 5 fold |
-| C3 | **Menunggu** | Aturan frozen mengarah ke ResNet-50 ImageNet; `model_lock.json` belum dibuat |
-| C4–C7 | **Belum dimulai** | Menunggu C3 dan konsultasi amendment proposal |
+| C3 | **Selesai** | ResNet-50 ImageNet terkunci; amendment proposal disetujui pembimbing |
+| C4–C7 | **Belum dimulai** | C4 S1/S2/S3 menjadi tahap eksperimen berikutnya |
 
 - Scientific protocol hash:
   `d42337690181f1054297f514934ad0c98bb718223bc06d8de5569f40a184ee32`.
@@ -32,8 +32,8 @@ C1/C2 tersedia di direktori protocol aktif:
 | Skenario | Input | Arsitektur |
 |---|---|---|
 | S1 | Empat metadata | MLP `4 → 64 → 128 → 1` |
-| S2 | Citra | CNN terpilih `→ GAP → 512 → 1` |
-| S3 | Citra + metadata | Concatenation `640 → 256 → 128 → 1` |
+| S2 | Citra | ResNet-50 ImageNet `→ GAP → 512 → 1` |
+| S3 | Citra + metadata | ResNet-50 + MLP; concatenation `640 → 256 → 128 → 1` |
 
 C1 adalah benchmark karakterisasi metadata. MLP tetap menjadi encoder canonical
 S1/S3, terlepas dari perbandingan terhadap RealMLP dan TabM. C2 memilih image
@@ -52,8 +52,7 @@ python run_experiment.py c0
 python run_experiment.py benchmark-tabular --model all --device cuda
 python run_experiment.py screen-image --backbone all --pretraining imagenet
 
-# Tahap berikutnya
-python run_experiment.py select
+# C3 sudah selesai; tahap berikutnya
 python run_experiment.py main --scenario all
 python run_experiment.py ablate --scenario both --feature-set all
 ```

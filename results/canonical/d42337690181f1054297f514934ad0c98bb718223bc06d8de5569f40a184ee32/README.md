@@ -7,7 +7,7 @@ d42337690181f1054297f514934ad0c98bb718223bc06d8de5569f40a184ee32
 ```
 
 Status saat dokumentasi ini dibuat: **C0 PASS, C1 selesai, C2 selesai dan
-diaudit, C3 menunggu**.
+diaudit, C3 selesai; C4 menunggu eksekusi**.
 
 ## Ringkasan C1 — Tabular Benchmark
 
@@ -37,11 +37,23 @@ Paired patient-cluster bootstrap menggunakan 2.000 deterministic replicates:
 | ResNet-50 − EfficientNet-B0 | +0.001930 | [+0.000009, +0.003881] |
 
 Berdasarkan aturan seleksi yang dibekukan, evidence C2 mengarah ke **ResNet-50
-ImageNet** dan candidate set hanya berisi ResNet-50. Ini belum disebut model
-lock sampai C3 menghasilkan `model_lock.json`. Karena proposal menyebut
-DenseNet/CheXNet, konsultasi dan proposal amendment diperlukan sebelum C4.
-Conditional CheXNet comparison tidak dijalankan karena kandidat terpilih bukan
-DenseNet-121.
+ImageNet** dan candidate set hanya berisi ResNet-50. Conditional CheXNet
+comparison tidak dijalankan karena kandidat terpilih bukan DenseNet-121.
+
+## C3 — Model Lock dan Amendment Proposal
+
+C3 menghasilkan `model_lock.json` berstatus `LOCKED` dengan keputusan:
+
+- backbone canonical: **ResNet-50**;
+- pretraining canonical: **ImageNet**;
+- heuristic candidate set: hanya ResNet-50;
+- scientific protocol dan protocol hash: tidak berubah.
+
+Proposal awal menyebut DenseNet-121/CheXNet. Pembimbing menyetujui penggunaan
+ResNet-50 setelah melihat evidence ROC-AUC C2, sebagaimana dilaporkan mahasiswa
+pada 24 Agustus 2026. Keputusan dicatat dalam `proposal_amendment.json` dan
+diikat ke checksum `model_lock.json`. Amendment ini memperbarui metode pada
+proposal, bukan scientific protocol yang sudah dibekukan.
 
 ## Integritas evidence
 
@@ -53,6 +65,8 @@ DenseNet-121.
   masing-masing stage.
 - Metric yang diregenerasi dari prediction CSV cocok dengan summary artifact.
 - Marker `_SUCCESS` tersedia untuk C1 dan C2.
+- `model_lock.json` dan `proposal_amendment.json` tersedia serta gate C4 telah
+  divalidasi terhadap protocol hash dan checksum model lock.
 
 ## Struktur direktori
 
@@ -65,6 +79,8 @@ DenseNet-121.
 ├── checksums.json                # checksum artifact freeze
 ├── environment.json              # environment pada protocol freeze
 ├── pip-freeze.txt                # dependency snapshot
+├── model_lock.json               # keputusan immutable C3
+├── proposal_amendment.json       # persetujuan perubahan metode proposal
 ├── runs/                         # artifact per run/fold
 ├── screening/tabular/            # pooled OOF dan summary C1
 ├── screening/image/              # pooled OOF dan summary C2

@@ -1,0 +1,57 @@
+{
+  "architecture_evidence": {
+    "comparisons": {
+      "resnet50_vs_densenet121": {
+        "auc_a": 0.7523896585444686,
+        "auc_b": 0.7447983566511216,
+        "ci_high": 0.009605989688352716,
+        "ci_low": 0.005608784385086779,
+        "conditional_on_fitted_cv_models": true,
+        "delta_auc": 0.007591301893347002,
+        "n_boot": 2000,
+        "resampling_unit": "patient_id",
+        "se": 0.0009972994956908999
+      },
+      "resnet50_vs_efficientnet_b0": {
+        "auc_a": 0.7523896585444686,
+        "auc_b": 0.7504601071782728,
+        "ci_high": 0.003881002374420536,
+        "ci_low": 9.089299089343218e-06,
+        "conditional_on_fitted_cv_models": true,
+        "delta_auc": 0.0019295513661957697,
+        "n_boot": 2000,
+        "resampling_unit": "patient_id",
+        "se": 0.0010002408914903636
+      }
+    },
+    "heuristic_candidate_set": [
+      "resnet50"
+    ],
+    "interpretation": "available OOF evidence did not clearly separate members of the heuristic set",
+    "pooled_auc": {
+      "densenet121": 0.7447983566511216,
+      "efficientnet_b0": 0.7504601071782728,
+      "resnet50": 0.7523896585444686
+    },
+    "selected": "resnet50",
+    "tie_break": [
+      "fold_auc_sd",
+      "trainable_parameters",
+      "median_training_seconds"
+    ],
+    "top_by_pooled_auc": "resnet50"
+  },
+  "c2_environment_hash": "8986d0e7f3809a317f6fb0c51882cbdc09da5b02b3e9ae3b7a6bb0984d861ed9",
+  "generated_at_utc": "2026-08-24T01:47:09.905915+00:00",
+  "implementation_commit": "f2548854a1bd1a0c96be114772da0436e73f0b0a",
+  "pretraining_evidence": {
+    "chexnet_comparison": "not_applicable",
+    "selected": "imagenet"
+  },
+  "proposal_amendment_required": true,
+  "protocol_hash": "d42337690181f1054297f514934ad0c98bb718223bc06d8de5569f40a184ee32",
+  "selected_backbone": "resnet50",
+  "selected_pretraining": "imagenet",
+  "selection_rule": "frozen_protocol_v1.0.0",
+  "status": "LOCKED"
+}

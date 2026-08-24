@@ -1,0 +1,26 @@
+{
+  "status": "APPROVED",
+  "protocol_hash": "d42337690181f1054297f514934ad0c98bb718223bc06d8de5569f40a184ee32",
+  "model_lock_hash": "9ba0f86c676c8537659e2fc3165f529dbb88c80b26a919956ac9956f8781ea66",
+  "approved_change": {
+    "proposal_backbone": "densenet121",
+    "proposal_pretraining": "chexnet",
+    "canonical_backbone": "resnet50",
+    "canonical_pretraining": "imagenet",
+    "task_unchanged": "NIH ChestXray14 binary Normal vs Abnormal",
+    "scenarios_unchanged": [
+      "S1",
+      "S2",
+      "S3"
+    ]
+  },
+  "approval_basis": "Supervisor approved the ResNet-50 selection after reviewing the frozen C2 ROC-AUC evidence.",
+  "approval_record": {
+    "approved_by_role": "dosen_pembimbing",
+    "approval_reported_by": "student",
+    "approval_reported_on": "2026-08-24",
+    "evidence_type": "supervisor_approval_reported_by_student"
+  },
+  "scientific_protocol_amended": false,
+  "notes": "This is a proposal/method-record amendment. ResNet-50 ImageNet was selected by the unchanged frozen protocol, so protocol v1.0.0 and protocol_hash remain unchanged."
+}

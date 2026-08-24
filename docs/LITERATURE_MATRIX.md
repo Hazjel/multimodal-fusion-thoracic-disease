@@ -40,7 +40,7 @@ terdahulu:
 
 | Penelitian | Dataset dan task | Skenario | Evaluasi dan XAI | Pembeda yang diuji |
 |---|---|---|---|---|
-| Penelitian ini (2026) | NIH ChestXray14; binary Normal vs Abnormal; image-level prediction dengan patient-level grouping | S1 canonical MLP; S2 CNN hasil frozen model-selection rule; S3 intermediate concatenation; Age, Gender, View Position, Follow-up # | Patient-level 5-fold CV; paired patient-cluster bootstrap 95% CI; ablation A–D; fold-specific image-conditioned SHAP; paired OOF Grad-CAM; official test sebagai secondary holdout with prior exposure | Controlled incremental value `AUC(S3-D) - AUC(S2)`, uncertainty, metadata-specific contribution, dan complementary per-modality explainability. |
+| Penelitian ini (2026) | NIH ChestXray14; binary Normal vs Abnormal; image-level prediction dengan patient-level grouping | S1 canonical MLP; S2 ResNet-50 ImageNet; S3 intermediate concatenation ResNet-50 + MLP; Age, Gender, View Position, Follow-up # | Patient-level 5-fold CV; paired patient-cluster bootstrap 95% CI; ablation A–D; fold-specific image-conditioned SHAP; paired OOF Grad-CAM; official test sebagai secondary holdout with prior exposure | Controlled incremental value `AUC(S3-D) - AUC(S2)`, uncertainty, metadata-specific contribution, dan complementary per-modality explainability. C3 locked ResNet-50 ImageNet; proposal amendment disetujui pembimbing pada 24 Agustus 2026. |
 
 ## Literatur pendukung di luar matriks inti
 
