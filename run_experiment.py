@@ -15,7 +15,12 @@ configure_cublas_workspace()
 from configs.config import cfg
 from src.protocol.chexnet import write_chexnet_provenance_audit
 from src.protocol.freeze import freeze_protocol
-from src.protocol.stages import load_model_lock, oof_path_for, stage_status
+from src.protocol.stages import (
+    finalize_cv_stage_if_complete,
+    load_model_lock,
+    oof_path_for,
+    stage_status,
+)
 from src.training.cv import run_cross_validation
 from src.training.model_selection import create_model_lock
 from src.training.tabular_benchmark import TABULAR_MODELS, run_tabular_benchmark
@@ -169,6 +174,12 @@ def main() -> int:
                 pretraining=pretraining,
                 feature_set="D",
             )
+        finalize_cv_stage_if_complete(
+            protocol_dir,
+            stage="C4",
+            backbone=lock["selected_backbone"],
+            pretraining=lock["selected_pretraining"],
+        )
         return 0
     if args.command == "ablate":
         lock = load_model_lock(protocol_dir)
@@ -189,6 +200,12 @@ def main() -> int:
                     pretraining=pretraining,
                     feature_set=feature_set,
                 )
+        finalize_cv_stage_if_complete(
+            protocol_dir,
+            stage="C5",
+            backbone=lock["selected_backbone"],
+            pretraining=lock["selected_pretraining"],
+        )
         return 0
     raise AssertionError(f"Unhandled command: {args.command}")
 

@@ -162,6 +162,67 @@ def oof_path_for(
     raise StageGateError(f"No OOF artifact policy for stage {stage}")
 
 
+def finalize_cv_stage_if_complete(
+    protocol_dir: Path,
+    *,
+    stage: str,
+    backbone: str,
+    pretraining: str,
+) -> bool:
+    """Create a stage marker only after every canonical OOF artifact exists."""
+    root = Path(protocol_dir)
+    if stage == "C4":
+        expected = (
+            oof_path_for(
+                root,
+                stage="C4",
+                scenario="S1",
+                model="canonical_mlp",
+                pretraining="not_applicable",
+                feature_set="D",
+            ),
+            oof_path_for(
+                root,
+                stage="C4",
+                scenario="S2",
+                model=backbone,
+                pretraining=pretraining,
+                feature_set="D",
+            ),
+            oof_path_for(
+                root,
+                stage="C4",
+                scenario="S3",
+                model=backbone,
+                pretraining=pretraining,
+                feature_set="D",
+            ),
+        )
+        marker = root / "main" / "_SUCCESS"
+    elif stage == "C5":
+        expected = tuple(
+            oof_path_for(
+                root,
+                stage="C5",
+                scenario=scenario,
+                model="canonical_mlp" if scenario == "S1" else backbone,
+                pretraining="not_applicable" if scenario == "S1" else pretraining,
+                feature_set=feature_set,
+            )
+            for scenario in ("S1", "S3")
+            for feature_set in ("A", "B", "C")
+        )
+        marker = root / "ablation" / "_SUCCESS"
+    else:
+        raise StageGateError(f"No completion policy for stage {stage}")
+
+    if not all(path.is_file() for path in expected):
+        return False
+    marker.parent.mkdir(parents=True, exist_ok=True)
+    marker.write_text(f"{stage} canonical artifacts complete\n", encoding="utf-8")
+    return True
+
+
 def stage_status(protocol_dir: Path) -> Dict[str, Any]:
     protocol = load_frozen_protocol(protocol_dir)
     root = Path(protocol_dir)

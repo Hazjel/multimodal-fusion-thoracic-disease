@@ -51,7 +51,9 @@ from src.protocol.manifests import (
 from src.protocol.spec import build_scientific_spec
 from src.protocol.stages import (
     StageGateError,
+    finalize_cv_stage_if_complete,
     load_frozen_protocol,
+    oof_path_for,
     validate_cv_request,
 )
 from src.protocol.registry import upsert_registry
@@ -186,6 +188,45 @@ class ProtocolIdentityTests(unittest.TestCase):
                     feature_set="D",
                     protocol_dir=root,
                 )
+
+    def test_cv_stage_marker_requires_all_canonical_oof_artifacts(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            expected = [
+                oof_path_for(
+                    root,
+                    stage="C4",
+                    scenario=scenario,
+                    model="canonical_mlp" if scenario == "S1" else "resnet50",
+                    pretraining="not_applicable" if scenario == "S1" else "imagenet",
+                    feature_set="D",
+                )
+                for scenario in ("S1", "S2", "S3")
+            ]
+            for path in expected[:-1]:
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text("prediction\n", encoding="utf-8")
+
+            self.assertFalse(
+                finalize_cv_stage_if_complete(
+                    root,
+                    stage="C4",
+                    backbone="resnet50",
+                    pretraining="imagenet",
+                )
+            )
+            self.assertFalse((root / "main" / "_SUCCESS").exists())
+
+            expected[-1].write_text("prediction\n", encoding="utf-8")
+            self.assertTrue(
+                finalize_cv_stage_if_complete(
+                    root,
+                    stage="C4",
+                    backbone="resnet50",
+                    pretraining="imagenet",
+                )
+            )
+            self.assertTrue((root / "main" / "_SUCCESS").is_file())
 
     def test_stage_environment_lock_rejects_mixed_c2_runs(self):
         with tempfile.TemporaryDirectory() as directory:
