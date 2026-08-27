@@ -23,7 +23,7 @@ Status notebook:
 | `C4_main_scenarios_report.ipynb` | Tersedia | C4 S1/S2/S3, 15/15 fold complete |
 | `C5_metadata_ablation_report.ipynb` | Tersedia | C5 S1/S3 feature sets A–D complete |
 | `C6_statistics_xai_report.ipynb` | Tersedia | C6 bootstrap, calibration, SHAP, dan Grad-CAM complete |
-| `C7_secondary_holdout_report.ipynb` | Menunggu C7 | Belum dibuat |
+| `C7_secondary_holdout_report.ipynb` | Tersedia | C7 final refit + one-event secondary holdout complete |
 
 Dengan pola ini, CLI dan artifact registry tetap menjadi sumber kebenaran,
 sedangkan notebook hanya menjadi presentation layer untuk BAB IV.
