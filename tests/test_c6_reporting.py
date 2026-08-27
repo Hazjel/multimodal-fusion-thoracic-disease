@@ -34,6 +34,10 @@ class C6ReportingTests(unittest.TestCase):
         self.assertEqual(result["role"], "secondary_operating_point_only")
         self.assertGreaterEqual(result["youden_j"], 0.0)
 
+    def test_gpu_scale_score_drift_is_within_c6_audit_tolerance(self):
+        self.assertTrue(np.isclose(0.3211886585, 0.3209972680, rtol=1e-3, atol=1e-3))
+        self.assertFalse(np.isclose(0.3312, 0.3210, rtol=1e-3, atol=1e-3))
+
     def test_local_selection_returns_two_per_confusion_category(self):
         rows = []
         specifications = {

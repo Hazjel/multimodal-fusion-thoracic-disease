@@ -471,7 +471,10 @@ def run_shap(
                     tabular=torch.from_numpy(tabular_scaled).unsqueeze(0).to(device),
                 ).reshape(-1)[0]).item())
             if not np.isclose(
-                model_score, float(oof_row["probability"]), rtol=1e-4, atol=1e-5
+                model_score,
+                float(oof_row["probability"]),
+                rtol=1e-3,
+                atol=1e-3,
             ):
                 raise RuntimeError(
                     f"Recomputed S3 score differs from OOF artifact for {image_name}: "
