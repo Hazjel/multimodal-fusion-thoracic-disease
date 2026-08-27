@@ -1,0 +1,6 @@
+{
+  "comparison": "paired_OOF_S2_vs_S3_same_cases",
+  "n_cases": 8,
+  "selection": "two_per_TP_TN_FP_FN_nearest_category_median_S3_score",
+  "status": "COMPLETE"
+}

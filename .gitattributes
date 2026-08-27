@@ -1,2 +1,7 @@
 # Frozen protocol artifacts are content-addressed; preserve their exact bytes.
 results/canonical/** text eol=lf
+# Binary plots/arrays must preserve the exact bytes recorded by artifact manifests.
+results/canonical/**/*.png -text
+results/canonical/**/*.npy -text
+results/canonical/**/*.pt -text
+results/canonical/**/*.pkl -text

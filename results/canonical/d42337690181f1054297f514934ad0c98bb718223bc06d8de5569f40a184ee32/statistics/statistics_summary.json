@@ -1,0 +1,13 @@
+{
+  "bootstrap_caveat": "Conditional on fitted CV models; no retraining occurs within replicates.",
+  "bootstrap_path": "D:\\TA\\nih-multimodal\\results\\canonical\\d42337690181f1054297f514934ad0c98bb718223bc06d8de5569f40a184ee32\\statistics\\bootstrap_comparisons.json",
+  "bootstrap_replicates": 2000,
+  "calibration_role": "diagnostic_only_not_calibrated_probability",
+  "cluster_unit": "patient_id",
+  "fold_metrics_path": "D:\\TA\\nih-multimodal\\results\\canonical\\d42337690181f1054297f514934ad0c98bb718223bc06d8de5569f40a184ee32\\statistics\\fold_metrics.csv",
+  "metrics_path": "D:\\TA\\nih-multimodal\\results\\canonical\\d42337690181f1054297f514934ad0c98bb718223bc06d8de5569f40a184ee32\\statistics\\metrics.csv",
+  "primary_estimand": "AUC(S3-D)-AUC(S2-D)",
+  "protocol_hash": "d42337690181f1054297f514934ad0c98bb718223bc06d8de5569f40a184ee32",
+  "status": "COMPLETE",
+  "unit_of_prediction": "image_exam"
+}

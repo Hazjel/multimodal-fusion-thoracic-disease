@@ -1,0 +1,23 @@
+{
+  "S1-D": {
+    "role": "secondary_operating_point_only",
+    "sensitivity": 0.6226404619142794,
+    "specificity": 0.5547524752475248,
+    "threshold": 0.5018675923347473,
+    "youden_j": 0.1773929371618041
+  },
+  "S2-D": {
+    "role": "secondary_operating_point_only",
+    "sensitivity": 0.661114812347324,
+    "specificity": 0.7301386138613861,
+    "threshold": 0.4701870381832123,
+    "youden_j": 0.3912534262087102
+  },
+  "S3-D": {
+    "role": "secondary_operating_point_only",
+    "sensitivity": 0.6756884299355985,
+    "specificity": 0.7143168316831683,
+    "threshold": 0.4678962528705597,
+    "youden_j": 0.39000526161876686
+  }
+}

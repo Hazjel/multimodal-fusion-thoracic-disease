@@ -1,0 +1,10 @@
+{
+  "background_per_fold": 100,
+  "cases_per_fold": 40,
+  "conditioning": "actual_preprocessed_oof_xray_fixed_per_case",
+  "interpretation": "average conditional attribution magnitude across OOF cases",
+  "metadata_space": "fold_specific_standard_scaled",
+  "n_oof_cases": 200,
+  "nsamples": 128,
+  "status": "COMPLETE"
+}
