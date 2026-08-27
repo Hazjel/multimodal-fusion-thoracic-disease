@@ -53,6 +53,10 @@ from src.training import save_scaler, train
 SCENARIOS = ("S1", "S2", "S3")
 OFFICIAL_TEST_CONFIRMATION = "OPEN-OFFICIAL-NIH-TEST"
 OFFICIAL_TEST_COLUMNS = ["image_index", "patient_id", "true_label"]
+SECONDARY_HOLDOUT_OPERATIONAL_FILES = frozenset({
+    "c7_holdout_stdout.log",
+    "c7_holdout_stderr.log",
+})
 
 
 def _modalities(scenario: str) -> Sequence[str]:
@@ -828,13 +832,7 @@ def _finalize_secondary_holdout(
         "interpretation": "secondary holdout with prior exposure; primary evidence remains pooled OOF",
     }
     atomic_write_json(output / "summary.json", summary)
-    artifacts = {}
-    for path in sorted(output.rglob("*")):
-        if path.is_file() and path.name not in {"artifact_manifest.json", "_SUCCESS"}:
-            artifacts[str(path.relative_to(root)).replace("\\", "/")] = {
-                "sha256": file_sha256(path),
-                "bytes": path.stat().st_size,
-            }
+    artifacts = _secondary_holdout_artifacts(root, output)
     manifest = {
         "status": "COMPLETE",
         "protocol_hash": root.name,
@@ -849,6 +847,61 @@ def _finalize_secondary_holdout(
         encoding="utf-8",
     )
     return summary
+
+
+def _secondary_holdout_artifacts(root: Path, output: Path) -> Dict[str, Dict[str, Any]]:
+    """Hash immutable C7 evidence while excluding process-owned operational logs."""
+    excluded = {"artifact_manifest.json", "_SUCCESS"} | set(
+        SECONDARY_HOLDOUT_OPERATIONAL_FILES
+    )
+    artifacts: Dict[str, Dict[str, Any]] = {}
+    for path in sorted(output.rglob("*")):
+        if path.is_file() and path.name not in excluded:
+            artifacts[str(path.relative_to(root)).replace("\\", "/")] = {
+                "sha256": file_sha256(path),
+                "bytes": path.stat().st_size,
+            }
+    return artifacts
+
+
+def rebuild_secondary_holdout_manifest(protocol_dir: Path) -> Dict[str, Any]:
+    """Rebuild C7 checksums from completed artifacts without reopening the test set."""
+    root = Path(protocol_dir)
+    output = root / "secondary_holdout"
+    required = [
+        output / "_SUCCESS",
+        output / "summary.json",
+        output / "prior_exposure_disclosure.json",
+        output / "official_test_access_receipt.json",
+        *(output / scenario / "_SUCCESS" for scenario in SCENARIOS),
+    ]
+    missing = [str(path) for path in required if not path.is_file()]
+    if missing:
+        raise StageGateError(
+            "Cannot rebuild an incomplete secondary-holdout manifest: " + ", ".join(missing)
+        )
+
+    summary = json.loads((output / "summary.json").read_text(encoding="utf-8"))
+    receipt = json.loads(
+        (output / "official_test_access_receipt.json").read_text(encoding="utf-8")
+    )
+    if summary.get("status") != "COMPLETE":
+        raise StageGateError("Secondary-holdout summary is not COMPLETE")
+    if summary.get("access_event_id") != receipt.get("access_event_id"):
+        raise StageGateError("Secondary-holdout summary and receipt event IDs differ")
+    if summary.get("protocol_hash") != receipt.get("protocol_hash"):
+        raise StageGateError("Secondary-holdout summary and receipt protocol hashes differ")
+
+    manifest = {
+        "status": "COMPLETE",
+        "protocol_hash": summary["protocol_hash"],
+        "access_event_id": summary["access_event_id"],
+        "implementation_commit": summary["implementation_commit"],
+        "environment_hash": summary["environment_hash"],
+        "artifacts": _secondary_holdout_artifacts(root, output),
+    }
+    atomic_write_json(output / "artifact_manifest.json", manifest)
+    return manifest
 
 
 def run_secondary_holdout(

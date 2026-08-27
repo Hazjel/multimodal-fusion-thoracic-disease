@@ -10,6 +10,7 @@ from src.protocol.spec import build_scientific_spec
 from src.protocol.stages import validate_c7_prerequisites
 from src.training.deployment import (
     OFFICIAL_TEST_CONFIRMATION,
+    _secondary_holdout_artifacts,
     claim_official_test_access,
 )
 
@@ -175,6 +176,26 @@ class C7GateTests(unittest.TestCase):
             self.assertFalse(
                 (root / "secondary_holdout" / "official_test_access_receipt.json").exists()
             )
+
+    def test_secondary_manifest_excludes_process_owned_logs(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            output = root / "secondary_holdout"
+            evidence = output / "S1" / "predictions.csv"
+            evidence.parent.mkdir(parents=True, exist_ok=True)
+            evidence.write_text("image_index,probability\ncase.png,0.5\n", encoding="utf-8")
+            (output / "c7_holdout_stdout.log").write_text("still writable\n", encoding="utf-8")
+            (output / "c7_holdout_stderr.log").write_text("still writable\n", encoding="utf-8")
+            atomic_write_json(output / "artifact_manifest.json", {"status": "old"})
+            (output / "_SUCCESS").write_text("ok\n", encoding="utf-8")
+
+            artifacts = _secondary_holdout_artifacts(root, output)
+
+            self.assertIn("secondary_holdout/S1/predictions.csv", artifacts)
+            self.assertNotIn("secondary_holdout/c7_holdout_stdout.log", artifacts)
+            self.assertNotIn("secondary_holdout/c7_holdout_stderr.log", artifacts)
+            self.assertNotIn("secondary_holdout/artifact_manifest.json", artifacts)
+            self.assertNotIn("secondary_holdout/_SUCCESS", artifacts)
 
 
 if __name__ == "__main__":
