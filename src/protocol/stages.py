@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from configs.config import cfg
 from src.protocol.contracts import (
@@ -64,6 +64,38 @@ def load_model_lock(protocol_dir: Path) -> Dict[str, Any]:
     return lock
 
 
+def _artifact_path(protocol_dir: Path, value: str) -> Path:
+    """Resolve a recorded artifact path without allowing escape from the protocol."""
+    root = Path(protocol_dir).resolve()
+    candidate = Path(value)
+    resolved = candidate.resolve() if candidate.is_absolute() else (root / candidate).resolve()
+    try:
+        resolved.relative_to(root)
+    except ValueError as exc:
+        raise StageGateError(f"Artifact path escapes canonical protocol directory: {value}") from exc
+    return resolved
+
+
+def _validate_checksum_manifest(protocol_dir: Path, manifest_path: Path) -> None:
+    manifest = read_json(manifest_path)
+    if manifest.get("status") != "COMPLETE":
+        raise StageGateError(f"Artifact manifest is not COMPLETE: {manifest_path}")
+    protocol = read_json(Path(protocol_dir) / "protocol.json")
+    if manifest.get("protocol_hash") != protocol.get("protocol_hash"):
+        raise StageGateError(f"Artifact manifest belongs to another protocol: {manifest_path}")
+    artifacts = manifest.get("artifacts")
+    if not isinstance(artifacts, dict) or not artifacts:
+        raise StageGateError(f"Artifact manifest has no checksummed artifacts: {manifest_path}")
+    for relative, expected in artifacts.items():
+        artifact = _artifact_path(protocol_dir, str(relative))
+        if not artifact.is_file():
+            raise StageGateError(f"Checksummed artifact is missing: {relative}")
+        if file_sha256(artifact) != expected.get("sha256"):
+            raise StageGateError(f"Artifact checksum mismatch: {relative}")
+        if artifact.stat().st_size != int(expected.get("bytes", -1)):
+            raise StageGateError(f"Artifact byte-size mismatch: {relative}")
+
+
 def _require_proposal_amendment(protocol_dir: Path, lock: Dict[str, Any]) -> None:
     if not lock.get("proposal_amendment_required", False):
         return
@@ -81,6 +113,72 @@ def _require_proposal_amendment(protocol_dir: Path, lock: Dict[str, Any]) -> Non
         Path(protocol_dir) / "model_lock.json"
     ):
         raise StageGateError("Proposal amendment does not approve the current model lock")
+
+
+def validate_c7_prerequisites(
+    protocol_dir: Path,
+    *,
+    require_refit: bool = False,
+) -> Dict[str, Any]:
+    """Validate the immutable C1-C6 DAG and, optionally, all deployment refits."""
+    root = Path(protocol_dir)
+    protocol = load_frozen_protocol(root)
+    lock = load_model_lock(root)
+    _require_proposal_amendment(root, lock)
+    required_markers = (
+        root / "screening" / "tabular" / "_SUCCESS",
+        root / "screening" / "image" / "_SUCCESS",
+        root / "main" / "_SUCCESS",
+        root / "ablation" / "_SUCCESS",
+        root / "statistics" / "_SUCCESS",
+        root / "xai" / "_SUCCESS",
+    )
+    missing = [str(path.relative_to(root)) for path in required_markers if not path.is_file()]
+    if missing:
+        raise StageGateError(f"C7 is blocked; incomplete prerequisite markers: {missing}")
+    c6_manifest = root / "statistics" / "artifact_manifest.json"
+    if not c6_manifest.is_file():
+        raise StageGateError("C7 requires the checksummed C6 artifact manifest")
+    _validate_checksum_manifest(root, c6_manifest)
+
+    result: Dict[str, Any] = {"protocol": protocol, "model_lock": lock}
+    if not require_refit:
+        return result
+
+    marker = root / "deployment" / "_REFIT_SUCCESS"
+    index_path = root / "deployment" / "refit_index.json"
+    if not marker.is_file() or not index_path.is_file():
+        raise StageGateError("Official test is blocked until all C7 deployment refits finish")
+    index = read_json(index_path)
+    if index.get("status") != "READY_FOR_SECONDARY_HOLDOUT":
+        raise StageGateError("Deployment refit index is not ready for secondary holdout")
+    if index.get("protocol_hash") != protocol["protocol_hash"]:
+        raise StageGateError("Deployment refit index belongs to another protocol")
+    if index.get("model_lock_hash") != file_sha256(root / "model_lock.json"):
+        raise StageGateError("Deployment refit index does not match the current model lock")
+    if index.get("deployment_split_hash") != file_sha256(root / "deployment_split.csv"):
+        raise StageGateError("Deployment refit index does not match the immutable split")
+    scenarios = index.get("scenarios")
+    if not isinstance(scenarios, dict) or set(scenarios) != {"S1", "S2", "S3"}:
+        raise StageGateError("Deployment refit index must contain exactly S1, S2, and S3")
+    for scenario, entry in scenarios.items():
+        if entry.get("scenario") != scenario or entry.get("status") != "COMPLETE":
+            raise StageGateError(f"Invalid deployment refit entry for {scenario}")
+        checkpoint = _artifact_path(root, str(entry.get("checkpoint_path", "")))
+        if not checkpoint.is_file():
+            raise StageGateError(f"Missing deployment checkpoint for {scenario}: {checkpoint}")
+        if file_sha256(checkpoint) != entry.get("checkpoint_sha256"):
+            raise StageGateError(f"Deployment checkpoint checksum mismatch for {scenario}")
+        scaler_value: Optional[str] = entry.get("scaler_path")
+        if scenario in {"S1", "S3"}:
+            if not scaler_value:
+                raise StageGateError(f"Missing deployment scaler entry for {scenario}")
+            scaler = _artifact_path(root, scaler_value)
+            if not scaler.is_file() or file_sha256(scaler) != entry.get("scaler_sha256"):
+                raise StageGateError(f"Deployment scaler checksum mismatch for {scenario}")
+    result["refit_index"] = index
+    result["refit_index_path"] = index_path
+    return result
 
 
 def validate_cv_request(
@@ -245,5 +343,9 @@ def stage_status(protocol_dir: Path) -> Dict[str, Any]:
         "C4_main_complete": (root / "main" / "_SUCCESS").exists(),
         "C5_ablation_complete": (root / "ablation" / "_SUCCESS").exists(),
         "C6_xai_statistics_complete": (root / "statistics" / "_SUCCESS").exists(),
+        "C7_deployment_refit_complete": (root / "deployment" / "_REFIT_SUCCESS").exists(),
+        "C7_official_test_access_claimed": (
+            root / "secondary_holdout" / "official_test_access_receipt.json"
+        ).exists(),
         "C7_secondary_holdout_complete": (root / "secondary_holdout" / "_SUCCESS").exists(),
     }

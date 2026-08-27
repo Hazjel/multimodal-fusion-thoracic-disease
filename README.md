@@ -12,7 +12,10 @@ Position, dan Follow-up #.
 | C1 | **Selesai** | MLP, RealMLP, dan TabM; masing-masing 5 fold |
 | C2 | **Selesai dan diaudit** | DenseNet-121, ResNet-50, dan EfficientNet-B0; masing-masing 5 fold |
 | C3 | **Selesai** | ResNet-50 ImageNet terkunci; amendment proposal disetujui pembimbing |
-| C4–C7 | **Belum dimulai** | C4 S1/S2/S3 menjadi tahap eksperimen berikutnya |
+| C4 | **Selesai** | S1/S2/S3, seluruh 15 fold canonical lengkap |
+| C5 | **Selesai** | Ablation metadata A-D untuk S1 dan S3 lengkap |
+| C6 | **Selesai** | Statistik OOF, calibration, SHAP, dan Grad-CAM lengkap |
+| C7 | **Refit belum dijalankan** | Runner final-refit tersedia; official test tetap tertutup |
 
 - Scientific protocol hash:
   `d42337690181f1054297f514934ad0c98bb718223bc06d8de5569f40a184ee32`.
@@ -52,14 +55,28 @@ python run_experiment.py c0
 python run_experiment.py benchmark-tabular --model all --device cuda
 python run_experiment.py screen-image --backbone all --pretraining imagenet
 
-# C3 sudah selesai; tahap berikutnya
+# C3-C6 sudah selesai pada protocol aktif
 python run_experiment.py main --scenario all
 python run_experiment.py ablate --scenario both --feature-set all
+python run_experiment.py c6 --component all --device cuda
+
+# Tahap berikutnya: final-refit S1/S2/S3, hanya memakai training pool
+python run_experiment.py c7 --phase refit --scenario all --device cuda
+
+# JANGAN dijalankan sebelum refit lengkap dan keputusan membuka secondary holdout
+python run_experiment.py c7 --phase evaluate --device cuda `
+  --confirm-official-test-access OPEN-OFFICIAL-NIH-TEST
 ```
 
 `main` dan `ablate` akan *hard-fail* sebelum `model_lock.json` tersedia.
 Apabila C3 memilih metode berbeda dari proposal, persetujuan pembimbing dicatat
 sebagai proposal amendment tanpa mengubah scientific protocol.
+
+C7 dipisahkan menjadi `refit` dan `evaluate`. Fase `refit` menggunakan immutable
+`deployment_split.csv` dan tidak membaca `test_list.txt`. Fase `evaluate` baru
+dapat berjalan setelah checkpoint S1/S2/S3 lengkap, seluruh C1-C6 lulus, dan
+access event diklaim secara eksplisit. Access event dapat di-resume pada commit
+dan environment yang sama, tetapi evaluasi baru diblokir setelah `_SUCCESS`.
 
 ## Struktur hasil
 

@@ -21,6 +21,7 @@ _STAGE_DIRECTORIES = {
     "C4": ("main",),
     "C5": ("ablation",),
     "C6": ("statistics",),
+    "C7": ("deployment",),
 }
 
 

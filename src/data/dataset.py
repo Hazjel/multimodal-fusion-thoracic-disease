@@ -311,6 +311,43 @@ def make_fold_dataloaders(
     return train_loader, validation_loader, train_ds.scaler, compute_pos_weight(train_frame)
 
 
+def make_inference_dataloader(
+    frame: pd.DataFrame,
+    image_index: Dict[str, Path],
+    *,
+    modalities: Sequence[str],
+    scaler: Optional[StandardScaler] = None,
+    feature_set: str = "D",
+    seed: int = 42,
+) -> DataLoader:
+    """Build a deterministic, augmentation-free loader for canonical inference."""
+    if feature_set not in TABULAR_FEATURE_SETS:
+        raise ValueError(f"Unknown feature set: {feature_set}")
+    uses_tabular = "tabular" in modalities
+    if uses_tabular and scaler is None:
+        raise ValueError("Tabular inference requires a fitted training-only scaler")
+    dataset = NIHChestXrayDataset(
+        frame,
+        image_index=image_index,
+        transform=get_transforms(False) if "image" in modalities else None,
+        scaler=scaler if uses_tabular else None,
+        tabular_cols=TABULAR_FEATURE_SETS[feature_set],
+        modalities=modalities,
+    )
+    generator = torch.Generator().manual_seed(seed)
+    return DataLoader(
+        dataset,
+        batch_size=cfg.train.eval_batch_size,
+        shuffle=False,
+        drop_last=False,
+        generator=generator,
+        num_workers=cfg.data.num_workers,
+        pin_memory=cfg.data.pin_memory,
+        persistent_workers=False,
+        worker_init_fn=_seed_worker,
+    )
+
+
 def raw_semantic_tabular_frame(frame: pd.DataFrame, feature_set: str = "D") -> pd.DataFrame:
     """Dataframe contract for RealMLP/TabM model-specific preprocessing."""
     if feature_set not in TABULAR_FEATURE_SETS:

@@ -348,6 +348,16 @@ def train(
             "learning_rates": [group["lr"] for group in optimizer.param_groups],
         })
         timing_seconds.append(elapsed_seconds)
+        print(
+            f"[{scenario}] run={metadata.get('run_id', run_dir.name)} "
+            f"epoch={epoch}/{cfg.train.num_epochs} "
+            f"train_loss={train_result['loss']:.6f} "
+            f"val_loss={validation_result['loss']:.6f} "
+            f"val_auc={validation_auc:.6f} best_auc={best_auc:.6f} "
+            f"patience={patience_count}/{cfg.train.early_stop_patience} "
+            f"seconds={elapsed_seconds:.1f}",
+            flush=True,
+        )
         payload = {
             "epoch": epoch,
             "model_state": model.state_dict(),

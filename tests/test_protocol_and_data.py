@@ -401,7 +401,8 @@ class DataContractTests(unittest.TestCase):
             )
             with self.assertRaises(OfficialTestAccessError):
                 assert_official_test_access(stage="C2", protocol_path=protocol_path)
-            assert_official_test_access(stage="C7", protocol_path=protocol_path)
+            with self.assertRaises(OfficialTestAccessError):
+                assert_official_test_access(stage="C7", protocol_path=protocol_path)
 
 
 if __name__ == "__main__":

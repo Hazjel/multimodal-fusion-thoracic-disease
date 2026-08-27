@@ -25,6 +25,7 @@ from configs.config import cfg
 from src.data.dataset import get_transforms
 from src.models.architectures import MultimodalFusion
 from src.protocol.contracts import file_sha256, read_json
+from src.protocol.stages import load_frozen_protocol
 from src.xai import compute_gradcam, make_shap_explainer, overlay_gradcam
 
 
@@ -37,7 +38,11 @@ def _discover_manifest() -> Optional[Path]:
     if explicit:
         return Path(explicit)
     candidates = sorted(
-        cfg.paths.canonical_dir.glob("*/deployment/deployment_manifest.json"),
+        (
+            path
+            for path in cfg.paths.canonical_dir.glob("*/deployment/deployment_manifest.json")
+            if (path.parent / "_REFIT_SUCCESS").is_file()
+        ),
         key=lambda path: path.stat().st_mtime,
         reverse=True,
     )
@@ -50,22 +55,29 @@ def _verify_file(path: Path, expected_checksum: str) -> None:
         raise RuntimeError(f"Deployment artifact checksum mismatch: {path}")
 
 
+def _manifest_path(manifest_path: Path, value: str) -> Path:
+    path = Path(value)
+    return path if path.is_absolute() else (manifest_path.parent / path).resolve()
+
+
 @lru_cache(maxsize=1)
 def load_deployment() -> Tuple[MultimodalFusion, Any, np.ndarray, Dict[str, Any]]:
     manifest_path = _discover_manifest()
     if manifest_path is None:
         raise RuntimeError("C7 canonical deployment artifact is not available yet")
     manifest = read_json(manifest_path)
-    protocol_path = Path(manifest["protocol_path"])
-    protocol = read_json(protocol_path)
-    if protocol.get("status") != "FROZEN":
-        raise RuntimeError("Deployment requires a FROZEN canonical protocol")
+    if manifest.get("status") != "READY" or manifest.get("scenario") != "S3":
+        raise RuntimeError("Deployment manifest is not a READY canonical S3 artifact")
+    protocol_path = _manifest_path(manifest_path, manifest["protocol_path"])
+    protocol = load_frozen_protocol(protocol_path.parent)
     if manifest.get("protocol_hash") != protocol.get("protocol_hash"):
         raise RuntimeError("Deployment manifest protocol hash mismatch")
 
-    checkpoint_path = Path(manifest["checkpoint_path"])
-    scaler_path = Path(manifest["scaler_path"])
-    background_path = Path(manifest["shap_background_path"])
+    refit_index_path = _manifest_path(manifest_path, manifest["refit_index_path"])
+    checkpoint_path = _manifest_path(manifest_path, manifest["checkpoint_path"])
+    scaler_path = _manifest_path(manifest_path, manifest["scaler_path"])
+    background_path = _manifest_path(manifest_path, manifest["shap_background_path"])
+    _verify_file(refit_index_path, manifest["refit_index_checksum"])
     _verify_file(checkpoint_path, manifest["checkpoint_checksum"])
     _verify_file(scaler_path, manifest["scaler_checksum"])
     _verify_file(background_path, manifest["shap_background_checksum"])

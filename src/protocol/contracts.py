@@ -108,6 +108,18 @@ def git_is_dirty(project_root: Path) -> bool:
     return bool(completed.stdout.strip())
 
 
+def git_paths_are_dirty(project_root: Path, paths: list[str]) -> bool:
+    """Check implementation paths while ignoring unrelated documents/results."""
+    completed = subprocess.run(
+        ["git", "status", "--porcelain", "--untracked-files=all", "--", *paths],
+        cwd=project_root,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    return bool(completed.stdout.strip())
+
+
 def atomic_write_json(path: Path, payload: Mapping[str, Any]) -> None:
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)

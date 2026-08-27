@@ -22,6 +22,11 @@ from src.protocol.stages import (
     stage_status,
 )
 from src.training.cv import run_cross_validation
+from src.training.deployment import (
+    OFFICIAL_TEST_CONFIRMATION,
+    run_deployment_refit,
+    run_secondary_holdout,
+)
 from src.training.model_selection import create_model_lock
 from src.training.tabular_benchmark import TABULAR_MODELS, run_tabular_benchmark
 
@@ -96,6 +101,19 @@ def _parser() -> argparse.ArgumentParser:
     )
     c6.add_argument("--device", choices=["cpu", "cuda"], default=None)
     c6.add_argument("--shap-nsamples", type=int, default=128)
+
+    c7 = subcommands.add_parser(
+        "c7", help="Run deployment refit or explicitly open the secondary holdout"
+    )
+    _add_protocol_dir(c7)
+    c7.add_argument("--phase", choices=["refit", "evaluate"], default="refit")
+    c7.add_argument("--scenario", choices=["all", "S1", "S2", "S3"], default="all")
+    c7.add_argument("--device", choices=["cpu", "cuda"], default=None)
+    c7.add_argument(
+        "--confirm-official-test-access",
+        default=None,
+        help=f"Required only for evaluate; exact value: {OFFICIAL_TEST_CONFIRMATION}",
+    )
     return parser
 
 
@@ -228,6 +246,25 @@ def main() -> int:
             device=device,
             shap_nsamples=args.shap_nsamples,
         )
+        print(json.dumps(result, indent=2, sort_keys=True, default=str))
+        return 0
+    if args.command == "c7":
+        device = None if args.device is None else __import__("torch").device(args.device)
+        if args.phase == "refit":
+            scenarios = ("S1", "S2", "S3") if args.scenario == "all" else (args.scenario,)
+            result = run_deployment_refit(
+                protocol_dir,
+                scenarios=scenarios,
+                device=device,
+            )
+        else:
+            if args.scenario != "all":
+                raise RuntimeError("C7 official holdout must evaluate frozen S1/S2/S3 together")
+            result = run_secondary_holdout(
+                protocol_dir,
+                confirmation=args.confirm_official_test_access or "",
+                device=device,
+            )
         print(json.dumps(result, indent=2, sort_keys=True, default=str))
         return 0
     raise AssertionError(f"Unhandled command: {args.command}")

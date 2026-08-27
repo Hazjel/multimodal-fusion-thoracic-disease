@@ -34,6 +34,24 @@ Status: **FINAL research design / freeze candidate**. The protocol becomes
 
 All scientific values, preprocessing, selection rules, estimands, XAI rules,
 and immutable manifest hashes are serialized in the generated `protocol.json`.
+
+## C7 operational contract
+
+C7 memiliki dua fase yang tidak boleh digabung:
+
+1. `refit` melatih S1, S2, dan S3 pada immutable deployment split 90/10. Fase
+   ini hanya membaca official training pool, menggunakan checkpoint selection
+   yang sama, mendukung deterministic resume, dan tidak membuka tuning baru.
+2. `evaluate` memerlukan ketiga refit berstatus lengkap, checksum valid, seluruh
+   marker C1-C6, model lock, proposal amendment, environment lock, serta
+   konfirmasi `OPEN-OFFICIAL-NIH-TEST`. Setelah itu satu access-event receipt
+   dibuat secara atomik sebelum official test manifest dimaterialisasi.
+
+Access event dapat dilanjutkan setelah interupsi hanya dengan protocol, refit
+index, implementation commit, dan environment yang sama. Setelah
+`secondary_holdout/_SUCCESS` tersedia, akses evaluasi ulang diblokir. Hasilnya
+selalu diberi label *secondary holdout with prior exposure*; primary evidence
+tetap pooled OOF patient-level five-fold cross-validation.
 Only its `scientific_spec` contributes to `protocol_hash`; Git/environment
 provenance contributes to each run's `semantic_config_hash`.
 
