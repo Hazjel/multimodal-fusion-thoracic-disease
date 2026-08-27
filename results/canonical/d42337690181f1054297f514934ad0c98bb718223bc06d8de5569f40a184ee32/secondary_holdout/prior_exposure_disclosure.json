@@ -1,0 +1,7 @@
+{
+  "access_event_id": "1fd6844c-a989-49c5-84d6-5e44a4127b9f",
+  "claim": "not presented as a pristine independent generalization estimate",
+  "official_partition_role": "secondary holdout with prior exposure",
+  "primary_evidence": "patient-level five-fold OOF evaluation on official training pool",
+  "status": "DISCLOSED"
+}

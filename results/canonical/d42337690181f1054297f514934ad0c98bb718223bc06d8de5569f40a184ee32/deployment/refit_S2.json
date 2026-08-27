@@ -1,0 +1,25 @@
+{
+  "best_validation_auc": 0.7551298245953462,
+  "checkpoint_epoch": 4,
+  "checkpoint_path": "deployment/runs/C7-refit-S2-resnet50-imagenet-D-64f36323c916/best.pt",
+  "checkpoint_sha256": "30b7d731fe0ca668008e1f198933f34de51481125b69c10e407e87240426eda3",
+  "environment_hash": "8986d0e7f3809a317f6fb0c51882cbdc09da5b02b3e9ae3b7a6bb0984d861ed9",
+  "feature_set": "D",
+  "implementation_commit": "448933aa095dd0d4b89868df790c3462dec4a9df",
+  "initial_image_hashes": [
+    "c377d827ca9787e53488eece432422549c6553b5f366e123e2d453b14efffe29",
+    "57d878e47e340d7d71c44cff9d80069e99c011021ffb8e7f9263b87da74155db"
+  ],
+  "model": "resnet50",
+  "pos_weight": 1.4017950296401978,
+  "pretraining": "imagenet",
+  "run_id": "C7-refit-S2-resnet50-imagenet-D-64f36323c916",
+  "scaler_path": null,
+  "scaler_sha256": null,
+  "scenario": "S2",
+  "semantic_config_hash": "64f36323c9162404c4735d50665be3bec60203e3aebbfce543fa4bd82e9bd5fd",
+  "status": "COMPLETE",
+  "validation_metrics_path": "deployment/runs/C7-refit-S2-resnet50-imagenet-D-64f36323c916/validation_metrics.json",
+  "validation_predictions_path": "deployment/runs/C7-refit-S2-resnet50-imagenet-D-64f36323c916/validation_predictions.csv",
+  "validation_predictions_sha256": "d1b1d2a07e37a899823832066c99b219291938572f676ac778e6e5e7e863d163"
+}

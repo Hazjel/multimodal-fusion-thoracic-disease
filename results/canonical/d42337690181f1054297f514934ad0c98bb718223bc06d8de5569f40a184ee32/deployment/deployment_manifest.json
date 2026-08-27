@@ -1,0 +1,20 @@
+{
+  "backbone": "resnet50",
+  "checkpoint_checksum": "91d1ea227a0fe5a369b23690b4fdd0ee202f3cbf1f49b2afe7bf86b30aeb9fb0",
+  "checkpoint_path": "runs/C7-refit-S3-resnet50-imagenet-D-ef5a94dda812/best.pt",
+  "display": "Skor model untuk kelas Abnormal; bukan probabilitas klinis terkalibrasi",
+  "pretraining": "imagenet",
+  "protocol_hash": "d42337690181f1054297f514934ad0c98bb718223bc06d8de5569f40a184ee32",
+  "protocol_path": "../protocol.json",
+  "refit_index_checksum": "2403e82dc6fdfcdc09596535d9b875010dfaa42ee9a70c91bff2f1cdcc711de8",
+  "refit_index_path": "refit_index.json",
+  "scaler_checksum": "153e3b63b06050d753a2a805990379c02b06848637ad22ba2326f3ef36a69eb0",
+  "scaler_path": "runs/C7-refit-S3-resnet50-imagenet-D-ef5a94dda812/scaler.pkl",
+  "scenario": "S3",
+  "shap_background_cases_checksum": "f72e57b7d7441536d502fbdac530a5635fa3c1279ae9cafafe8c496f8b79fe3b",
+  "shap_background_cases_path": "shap_background_cases.csv",
+  "shap_background_checksum": "ed3f2260a6f15f87d4fcae583a49c2112cfc79b0d6d6e211bb0be30506e867ff",
+  "shap_background_path": "shap_background_scaled.npy",
+  "status": "READY",
+  "threshold": 0.5
+}

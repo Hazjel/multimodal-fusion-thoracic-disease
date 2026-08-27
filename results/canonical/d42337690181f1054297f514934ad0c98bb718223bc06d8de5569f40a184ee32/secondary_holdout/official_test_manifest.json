@@ -1,0 +1,10 @@
+{
+  "abnormal_prevalence": 0.6147444913267698,
+  "access_event_id": "1fd6844c-a989-49c5-84d6-5e44a4127b9f",
+  "images": 25596,
+  "manifest_sha256": "3fa7a1c639097d274247b7aab2a2074f598958f5328589110c3dd69042fdf208",
+  "patients": 2797,
+  "protocol_hash": "d42337690181f1054297f514934ad0c98bb718223bc06d8de5569f40a184ee32",
+  "status": "IMMUTABLE",
+  "test_list_sha256": "38ca5ef7f756092946f57c1a59faca882ed589a1ab1f72590b45dc06c6d5e1cc"
+}

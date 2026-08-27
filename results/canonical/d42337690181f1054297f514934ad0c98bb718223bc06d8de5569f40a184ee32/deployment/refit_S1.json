@@ -1,0 +1,22 @@
+{
+  "best_validation_auc": 0.6252141812589873,
+  "checkpoint_epoch": 9,
+  "checkpoint_path": "deployment/runs/C7-refit-S1-canonical_mlp-not_applicable-D-4e4f5776c1d8/best.pt",
+  "checkpoint_sha256": "af5237223dca5dbb53dad4f7ec1c576b2fcae6f9e974c22fe96cb16f335e3789",
+  "environment_hash": "8986d0e7f3809a317f6fb0c51882cbdc09da5b02b3e9ae3b7a6bb0984d861ed9",
+  "feature_set": "D",
+  "implementation_commit": "448933aa095dd0d4b89868df790c3462dec4a9df",
+  "initial_image_hashes": null,
+  "model": "canonical_mlp",
+  "pos_weight": 1.4017950296401978,
+  "pretraining": "not_applicable",
+  "run_id": "C7-refit-S1-canonical_mlp-not_applicable-D-4e4f5776c1d8",
+  "scaler_path": "deployment/runs/C7-refit-S1-canonical_mlp-not_applicable-D-4e4f5776c1d8/scaler.pkl",
+  "scaler_sha256": "153e3b63b06050d753a2a805990379c02b06848637ad22ba2326f3ef36a69eb0",
+  "scenario": "S1",
+  "semantic_config_hash": "4e4f5776c1d8cbbb7caf7e4e6068a892ac8dfa01b12cabd3c1cc3ed502b29b73",
+  "status": "COMPLETE",
+  "validation_metrics_path": "deployment/runs/C7-refit-S1-canonical_mlp-not_applicable-D-4e4f5776c1d8/validation_metrics.json",
+  "validation_predictions_path": "deployment/runs/C7-refit-S1-canonical_mlp-not_applicable-D-4e4f5776c1d8/validation_predictions.csv",
+  "validation_predictions_sha256": "9e5e9c632fe7c8f764bf44618a94f1030ea916387446c44a2a8d960f69c1f74c"
+}

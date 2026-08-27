@@ -1,0 +1,28 @@
+{
+  "access_event_id": "1fd6844c-a989-49c5-84d6-5e44a4127b9f",
+  "checkpoint_sha256": "30b7d731fe0ca668008e1f198933f34de51481125b69c10e407e87240426eda3",
+  "environment_hash": "8986d0e7f3809a317f6fb0c51882cbdc09da5b02b3e9ae3b7a6bb0984d861ed9",
+  "implementation_commit": "448933aa095dd0d4b89868df790c3462dec4a9df",
+  "metrics": {
+    "accuracy": 0.7009298327863729,
+    "average_precision": 0.7649078900690819,
+    "brier_score": 0.20550179457045573,
+    "f1": 0.7750183688464365,
+    "fn": 2550,
+    "fp": 5105,
+    "precision": 0.720885729907053,
+    "roc_auc": 0.7105351033319287,
+    "sensitivity": 0.8379408960915157,
+    "specificity": 0.4823040259608559,
+    "threshold": 0.5,
+    "tn": 4756,
+    "tp": 13185
+  },
+  "predictions_path": "secondary_holdout/S2/predictions.csv",
+  "predictions_sha256": "f38dce0f93441822d17609c76ae6cf9b803da30de1d4934ea7ade363382e6015",
+  "prior_exposure_disclosure": true,
+  "run_id": "C7-holdout-S2-resnet50-80d1ee9ffa1d",
+  "scenario": "S2",
+  "semantic_config_hash": "80d1ee9ffa1d3f22c32eafcb70de9e87b8aade0b1f7143ec33ef453fa3c7f7c5",
+  "status": "COMPLETE"
+}

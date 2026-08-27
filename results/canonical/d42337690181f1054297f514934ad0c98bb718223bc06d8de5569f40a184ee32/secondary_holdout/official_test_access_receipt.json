@@ -1,0 +1,11 @@
+{
+  "access_event_id": "1fd6844c-a989-49c5-84d6-5e44a4127b9f",
+  "claimed_at_utc": "2026-08-27T13:12:01.311682+00:00",
+  "environment_hash": "8986d0e7f3809a317f6fb0c51882cbdc09da5b02b3e9ae3b7a6bb0984d861ed9",
+  "implementation_commit": "448933aa095dd0d4b89868df790c3462dec4a9df",
+  "prior_exposure_disclosure": true,
+  "protocol_hash": "d42337690181f1054297f514934ad0c98bb718223bc06d8de5569f40a184ee32",
+  "refit_index_hash": "2403e82dc6fdfcdc09596535d9b875010dfaa42ee9a70c91bff2f1cdcc711de8",
+  "scope": "single resumable secondary-holdout evaluation of frozen S1/S2/S3",
+  "status": "CLAIMED"
+}

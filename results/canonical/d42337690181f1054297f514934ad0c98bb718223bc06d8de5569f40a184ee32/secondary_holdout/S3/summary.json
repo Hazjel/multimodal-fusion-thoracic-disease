@@ -1,0 +1,28 @@
+{
+  "access_event_id": "1fd6844c-a989-49c5-84d6-5e44a4127b9f",
+  "checkpoint_sha256": "91d1ea227a0fe5a369b23690b4fdd0ee202f3cbf1f49b2afe7bf86b30aeb9fb0",
+  "environment_hash": "8986d0e7f3809a317f6fb0c51882cbdc09da5b02b3e9ae3b7a6bb0984d861ed9",
+  "implementation_commit": "448933aa095dd0d4b89868df790c3462dec4a9df",
+  "metrics": {
+    "accuracy": 0.7048366932333177,
+    "average_precision": 0.765530085318714,
+    "brier_score": 0.20277158424443448,
+    "f1": 0.7774996318657046,
+    "fn": 2535,
+    "fp": 5020,
+    "precision": 0.7244785949506037,
+    "roc_auc": 0.7125273748704064,
+    "sensitivity": 0.8388941849380362,
+    "specificity": 0.490923841395396,
+    "threshold": 0.5,
+    "tn": 4841,
+    "tp": 13200
+  },
+  "predictions_path": "secondary_holdout/S3/predictions.csv",
+  "predictions_sha256": "36b0363dc77afbd40f408a31797deaeb536bbab9875793b2ee54985f8f5c1a0e",
+  "prior_exposure_disclosure": true,
+  "run_id": "C7-holdout-S3-resnet50-84762c117f3f",
+  "scenario": "S3",
+  "semantic_config_hash": "84762c117f3fe8faf9268fc3a322456f2144756faf0d980b5bd9bdb7598d2bb6",
+  "status": "COMPLETE"
+}

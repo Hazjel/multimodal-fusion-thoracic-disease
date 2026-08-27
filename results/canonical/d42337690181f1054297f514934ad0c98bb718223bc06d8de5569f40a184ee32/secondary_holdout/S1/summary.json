@@ -1,0 +1,28 @@
+{
+  "access_event_id": "1fd6844c-a989-49c5-84d6-5e44a4127b9f",
+  "checkpoint_sha256": "af5237223dca5dbb53dad4f7ec1c576b2fcae6f9e974c22fe96cb16f335e3789",
+  "environment_hash": "8986d0e7f3809a317f6fb0c51882cbdc09da5b02b3e9ae3b7a6bb0984d861ed9",
+  "implementation_commit": "448933aa095dd0d4b89868df790c3462dec4a9df",
+  "metrics": {
+    "accuracy": 0.6511173620878262,
+    "average_precision": 0.6850658248489244,
+    "brier_score": 0.2267239548639615,
+    "f1": 0.7533830433581884,
+    "fn": 2095,
+    "fp": 6835,
+    "precision": 0.6661782661782661,
+    "roc_auc": 0.6177932041522701,
+    "sensitivity": 0.8668573244359707,
+    "specificity": 0.3068654294696278,
+    "threshold": 0.5,
+    "tn": 3026,
+    "tp": 13640
+  },
+  "predictions_path": "secondary_holdout/S1/predictions.csv",
+  "predictions_sha256": "bb9d4ecdf7d92718c5aec1068eb186c7eb7131e5aedce90216ba2b97dac02c4b",
+  "prior_exposure_disclosure": true,
+  "run_id": "C7-holdout-S1-canonical_mlp-cb9ae2e99d80",
+  "scenario": "S1",
+  "semantic_config_hash": "cb9ae2e99d80055e07a7709889652bde73016fe4c320d368d512498fb263f42a",
+  "status": "COMPLETE"
+}

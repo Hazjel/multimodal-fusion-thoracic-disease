@@ -1,0 +1,25 @@
+{
+  "best_validation_auc": 0.7569822238486703,
+  "checkpoint_epoch": 4,
+  "checkpoint_path": "deployment/runs/C7-refit-S3-resnet50-imagenet-D-ef5a94dda812/best.pt",
+  "checkpoint_sha256": "91d1ea227a0fe5a369b23690b4fdd0ee202f3cbf1f49b2afe7bf86b30aeb9fb0",
+  "environment_hash": "8986d0e7f3809a317f6fb0c51882cbdc09da5b02b3e9ae3b7a6bb0984d861ed9",
+  "feature_set": "D",
+  "implementation_commit": "448933aa095dd0d4b89868df790c3462dec4a9df",
+  "initial_image_hashes": [
+    "c377d827ca9787e53488eece432422549c6553b5f366e123e2d453b14efffe29",
+    "57d878e47e340d7d71c44cff9d80069e99c011021ffb8e7f9263b87da74155db"
+  ],
+  "model": "resnet50",
+  "pos_weight": 1.4017950296401978,
+  "pretraining": "imagenet",
+  "run_id": "C7-refit-S3-resnet50-imagenet-D-ef5a94dda812",
+  "scaler_path": "deployment/runs/C7-refit-S3-resnet50-imagenet-D-ef5a94dda812/scaler.pkl",
+  "scaler_sha256": "153e3b63b06050d753a2a805990379c02b06848637ad22ba2326f3ef36a69eb0",
+  "scenario": "S3",
+  "semantic_config_hash": "ef5a94dda81295de54cd6bfe575b5951885c68fa127a7334b78d62ebfb4fd131",
+  "status": "COMPLETE",
+  "validation_metrics_path": "deployment/runs/C7-refit-S3-resnet50-imagenet-D-ef5a94dda812/validation_metrics.json",
+  "validation_predictions_path": "deployment/runs/C7-refit-S3-resnet50-imagenet-D-ef5a94dda812/validation_predictions.csv",
+  "validation_predictions_sha256": "b966fb636e38fbdc5c917c6f9e22dac42f9704ae271186c602d0406dc060e3b9"
+}

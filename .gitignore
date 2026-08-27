@@ -49,6 +49,13 @@ desktop.ini
 *.log
 logs/
 
+# Row-level research evidence stays local (aggregate results are publishable)
+results/canonical/*/secondary_holdout/*/predictions.csv
+results/canonical/*/secondary_holdout/official_test_manifest.csv
+results/canonical/*/deployment/runs/*/validation_predictions.csv
+results/canonical/*/deployment/shap_background_cases.csv
+results/canonical/*/deployment/shap_background_scaled.npy
+
 # Generated C0 scratch/report state (freeze artifacts are kept separately)
 results/c0/
 results/canonical/.staging/
