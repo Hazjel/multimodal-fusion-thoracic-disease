@@ -86,6 +86,16 @@ def _parser() -> argparse.ArgumentParser:
     _add_protocol_dir(ablate)
     ablate.add_argument("--scenario", choices=["both", "S1", "S3"], default="both")
     ablate.add_argument("--feature-set", choices=["all", "A", "B", "C"], default="all")
+
+    c6 = subcommands.add_parser(
+        "c6", help="Run canonical C6 OOF statistics, SHAP, and Grad-CAM"
+    )
+    _add_protocol_dir(c6)
+    c6.add_argument(
+        "--component", choices=["all", "statistics", "shap", "gradcam"], default="all"
+    )
+    c6.add_argument("--device", choices=["cpu", "cuda"], default=None)
+    c6.add_argument("--shap-nsamples", type=int, default=128)
     return parser
 
 
@@ -206,6 +216,19 @@ def main() -> int:
             backbone=lock["selected_backbone"],
             pretraining=lock["selected_pretraining"],
         )
+        return 0
+    if args.command == "c6":
+        import torch
+        from src.reporting.c6 import run_c6
+
+        device = None if args.device is None else torch.device(args.device)
+        result = run_c6(
+            protocol_dir,
+            component=args.component,
+            device=device,
+            shap_nsamples=args.shap_nsamples,
+        )
+        print(json.dumps(result, indent=2, sort_keys=True, default=str))
         return 0
     raise AssertionError(f"Unhandled command: {args.command}")
 
