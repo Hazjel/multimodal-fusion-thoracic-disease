@@ -8,7 +8,7 @@ split, dan aturan ilmiah yang menghasilkan artefak tersebut.
 
 | Versi | Protocol hash | Status |
 |---|---|---|
-| v1.0.0 | [`d4233769…a184ee32`](d42337690181f1054297f514934ad0c98bb718223bc06d8de5569f40a184ee32/README.md) | FROZEN; C1/C2 selesai, C3 menunggu |
+| v1.0.0 | [`d4233769...a184ee32`](d42337690181f1054297f514934ad0c98bb718223bc06d8de5569f40a184ee32/README.md) | FROZEN; C0-C7 complete |
 
 ## Konvensi penamaan run
 
@@ -35,8 +35,8 @@ Arti komponen:
 - `S1`, `S2`, `S3`: skenario utama bila berlaku.
 - nama model/backbone: implementasi yang diuji.
 - `imagenet`/`chexnet`: sumber pretraining.
-- `A`–`D`: feature set metadata; `D` berarti seluruh empat metadata.
-- `fold0`–`fold4`: validation fold primary CV.
+- `A`-`D`: feature set metadata; `D` berarti seluruh empat metadata.
+- `fold0`-`fold4`: validation fold primary CV.
 - suffix hash: identitas semantic configuration run.
 
 Nama file dan direktori yang sudah diregistrasikan tidak boleh diganti manual.

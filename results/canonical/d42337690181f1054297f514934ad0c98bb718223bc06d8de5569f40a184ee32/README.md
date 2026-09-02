@@ -1,102 +1,132 @@
-# Canonical Evidence — Protocol v1.0.0
+# Canonical Evidence - Protocol v1.0.0
 
-Direktori ini menyimpan bukti canonical untuk scientific protocol hash:
+Scientific protocol hash:
 
 ```text
 d42337690181f1054297f514934ad0c98bb718223bc06d8de5569f40a184ee32
 ```
 
-Status saat dokumentasi ini dibuat: **C0 PASS, C1 selesai, C2 selesai dan
-diaudit, C3 selesai; C4 menunggu eksekusi**.
+Status: **C0-C7 complete**. Primary evidence comes from patient-grouped
+five-fold out-of-fold predictions. The NIH official test partition is reported
+only as a secondary holdout with prior-exposure disclosure.
 
-## Ringkasan C1 — Tabular Benchmark
+## C1 - Tabular characterization benchmark
 
-Semua nilai berikut berasal dari pooled out-of-fold predictions pada 86.524
-citra dari 28.008 pasien. C1 adalah characterization benchmark; hasilnya tidak
-mengganti MLP sebagai encoder canonical S1/S3.
+All values use pooled OOF predictions from 86,524 images belonging to 28,008
+patients. This benchmark characterizes the four structured variables; it does
+not replace the canonical MLP used by S1 and S3.
 
-| Model | Pooled ROC-AUC | Average Precision | Brier score |
+| Model | ROC-AUC | Average Precision | Brier score |
 |---|---:|---:|---:|
 | Canonical MLP | 0.621382 | 0.519234 | 0.240854 |
 | RealMLP | 0.623753 | 0.521023 | 0.231982 |
 | TabM | 0.622107 | 0.518755 | 0.232309 |
 
-## Ringkasan C2 — ImageNet Screening
+## C2-C3 - Image screening and model lock
 
-| Backbone | Pooled ROC-AUC | Mean fold ROC-AUC ± SD | Average Precision |
+| Backbone | Pooled ROC-AUC | Fold ROC-AUC, mean +/- SD | Average Precision |
 |---|---:|---:|---:|
-| ResNet-50 | **0.752390** | **0.753542 ± 0.002201** | **0.672896** |
-| EfficientNet-B0 | 0.750460 | 0.751193 ± 0.001919 | 0.670582 |
-| DenseNet-121 | 0.744798 | 0.745843 ± 0.002406 | 0.664484 |
+| ResNet-50 | **0.752390** | **0.753542 +/- 0.002201** | **0.672896** |
+| EfficientNet-B0 | 0.750460 | 0.751193 +/- 0.001919 | 0.670582 |
+| DenseNet-121 | 0.744798 | 0.745843 +/- 0.002406 | 0.664484 |
 
-Paired patient-cluster bootstrap menggunakan 2.000 deterministic replicates:
+The paired 2,000-replicate patient-cluster bootstrap produced:
 
-| Perbandingan | Δ ROC-AUC | 95% percentile CI |
+| Comparison | Delta ROC-AUC | 95% percentile CI |
 |---|---:|---:|
-| ResNet-50 − DenseNet-121 | +0.007591 | [+0.005609, +0.009606] |
-| ResNet-50 − EfficientNet-B0 | +0.001930 | [+0.000009, +0.003881] |
+| ResNet-50 - DenseNet-121 | +0.007591 | [+0.005609, +0.009606] |
+| ResNet-50 - EfficientNet-B0 | +0.001930 | [+0.000009, +0.003881] |
 
-Berdasarkan aturan seleksi yang dibekukan, evidence C2 mengarah ke **ResNet-50
-ImageNet** dan candidate set hanya berisi ResNet-50. Conditional CheXNet
-comparison tidak dijalankan karena kandidat terpilih bukan DenseNet-121.
+The frozen selection rule locked **ResNet-50 with ImageNet initialization**.
+The conditional CheXNet comparison was not run because DenseNet-121 was not
+selected. The proposal-method update is recorded separately from the unchanged
+scientific protocol.
 
-## C3 — Model Lock dan Amendment Proposal
+## C4 - Primary comparative evidence
 
-C3 menghasilkan `model_lock.json` berstatus `LOCKED` dengan keputusan:
+| Scenario | Input | ROC-AUC | Average Precision | Brier score |
+|---|---|---:|---:|---:|
+| S1-D | Four metadata variables | 0.621382 | 0.519234 | 0.240854 |
+| S2-D | Chest X-ray | 0.752390 | 0.672896 | 0.200192 |
+| S3-D | Chest X-ray plus metadata | **0.753367** | 0.671663 | 0.200396 |
 
-- backbone canonical: **ResNet-50**;
-- pretraining canonical: **ImageNet**;
-- heuristic candidate set: hanya ResNet-50;
-- scientific protocol dan protocol hash: tidak berubah.
-
-Proposal awal menyebut DenseNet-121/CheXNet. Pembimbing menyetujui penggunaan
-ResNet-50 setelah melihat evidence ROC-AUC C2, sebagaimana dilaporkan mahasiswa
-pada 24 Agustus 2026. Keputusan dicatat dalam `proposal_amendment.json` dan
-diikat ke checksum `model_lock.json`. Amendment ini memperbarui metode pada
-proposal, bukan scientific protocol yang sudah dibekukan.
-
-## Integritas evidence
-
-- C1: 15/15 run `done` (3 model × 5 fold).
-- C2: 15/15 run `done` (3 backbone × 5 fold).
-- Setiap model memiliki tepat 86.524 OOF predictions dari 28.008 pasien.
-- Seluruh fold cocok dengan `folds.csv`; tidak ada patient overlap.
-- Protocol hash, environment hash, dan implementation commit konsisten dalam
-  masing-masing stage.
-- Metric yang diregenerasi dari prediction CSV cocok dengan summary artifact.
-- Marker `_SUCCESS` tersedia untuk C1 dan C2.
-- `model_lock.json` dan `proposal_amendment.json` tersedia serta gate C4 telah
-  divalidasi terhadap protocol hash dan checksum model lock.
-
-## Struktur direktori
+Primary estimand:
 
 ```text
-./
-├── protocol.json                 # scientific specification + provenance
-├── folds.csv                     # immutable primary-CV manifest
-├── deployment_split.csv          # immutable 90/10 deployment manifest
-├── experiment_registry.csv       # indeks seluruh canonical run
-├── checksums.json                # checksum artifact freeze
-├── environment.json              # environment pada protocol freeze
-├── pip-freeze.txt                # dependency snapshot
-├── model_lock.json               # keputusan immutable C3
-├── proposal_amendment.json       # persetujuan perubahan metode proposal
-├── runs/                         # artifact per run/fold
-├── screening/tabular/            # pooled OOF dan summary C1
-├── screening/image/              # pooled OOF dan summary C2
-├── main/                         # C4; belum dijalankan
-├── ablation/                     # C5; belum dijalankan
-├── xai/ dan statistics/          # C6; belum dijalankan
-└── secondary_holdout/            # C7; belum dijalankan
+Delta ROC-AUC (S3-D - S2) = +0.000977
+95% patient-cluster bootstrap CI = [-0.000375, +0.002317]
 ```
 
-## Provenance dan penggunaan
+The interval includes zero. Under the prespecified analysis, the available OOF
+evidence did not establish a clear improvement in discrimination from adding
+all four metadata variables to the image-only model.
 
-`protocol_hash` mengidentifikasi keputusan ilmiah, sedangkan exact Git commit,
-environment, dan resolved run configuration tercatat terpisah melalui
-provenance serta semantic config hash. Jangan memindahkan atau mengganti nama
-artefak run secara manual.
+## C5 - Metadata ablation
 
-OOF CSV berisi pengenal NIH yang diperlukan untuk patient-cluster bootstrap dan
-audit XAI. Checkpoint biner tidak disertakan dalam publikasi GitHub; evidence
-yang dipublikasikan berfokus pada prediction, metrics, registry, dan provenance.
+| S3 feature set | Included metadata | ROC-AUC | Delta vs S2 | 95% CI |
+|---|---|---:|---:|---:|
+| A | Age, Gender | 0.753244 | +0.000854 | [-0.000188, +0.001888] |
+| B | A plus View Position | 0.753603 | +0.001214 | [-0.000173, +0.002528] |
+| C | A plus Follow-up # | 0.753471 | +0.001081 | [-0.000413, +0.002463] |
+| D | All four variables | 0.753367 | +0.000977 | [-0.000375, +0.002317] |
+
+Descriptive differences relative to S3-A were +0.000359 for B, +0.000227 for
+C, and +0.000123 for D. These are incremental predictive contributions under
+the tested feature configurations, not causal effects.
+
+## C6 - Statistics and explainability
+
+- All paired confidence intervals use 2,000 deterministic bootstrap replicates
+  clustered by `patient_id` and are conditional on the fitted CV models.
+- Calibration diagnostics use Brier score and 10-bin reliability summaries;
+  sigmoid outputs are not claimed to be calibrated probabilities.
+- Fold-aware, image-conditioned KernelSHAP used 200 OOF cases. Mean absolute
+  conditional attribution was highest for Follow-up # (0.008760), followed by
+  View Position (0.007145), Age (0.005614), and Gender (0.002839).
+- Paired OOF Grad-CAM compared S2 and S3 on the same eight selected cases. The
+  maps are treated as a behavioral audit rather than lesion localization.
+
+## C7 - Secondary official holdout
+
+| Scenario | ROC-AUC | Average Precision | Brier score |
+|---|---:|---:|---:|
+| S1 | 0.617793 | 0.685066 | 0.226724 |
+| S2 | 0.710535 | 0.764908 | 0.205502 |
+| S3 | **0.712527** | **0.765530** | **0.202772** |
+
+The C7 S3-S2 ROC-AUC difference was +0.001992. These figures are secondary
+evidence because the official partition had influenced earlier exploratory
+work; primary inference remains based on pooled OOF predictions.
+
+## Integrity and publication policy
+
+- C1: 15/15 registered runs complete.
+- C2: 15/15 registered runs complete.
+- C4: 15/15 registered runs complete.
+- C5: 30/30 registered runs complete.
+- C6 statistics, SHAP, and Grad-CAM have completion markers.
+- C7 records one authorized official-test access event.
+- Fold manifests have no patient overlap, and metrics can be regenerated from
+  the published prediction artifacts.
+- Binary checkpoints, fitted scalers, and row-level C7 predictions remain local
+  and are ignored by Git. Aggregate metrics, OOF evidence, registry entries,
+  protocol manifests, and provenance are published.
+
+## Directory map
+
+```text
+protocol.json                 frozen scientific specification and provenance
+folds.csv                     immutable primary-CV manifest
+deployment_split.csv          immutable 90/10 deployment manifest
+experiment_registry.csv       registered canonical runs
+checksums.json                freeze artifact checksums
+environment.json              freeze environment manifest
+pip-freeze.txt                dependency snapshot
+model_lock.json               immutable C3 decision
+proposal_amendment.json       proposal-method record
+screening/                    C1 and C2 summaries plus OOF predictions
+main/                         C4 summaries plus OOF predictions
+ablation/                     C5 summaries plus OOF predictions
+statistics/ and xai/          C6 inference, calibration, SHAP, and Grad-CAM
+secondary_holdout/            C7 aggregate public evidence
+```

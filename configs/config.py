@@ -12,10 +12,18 @@ from pathlib import Path
 from typing import Any, Dict, Tuple
 
 
+DEFAULT_PROJECT_ROOT = Path(__file__).resolve().parents[1]
+DEFAULT_DATASET_ROOT = DEFAULT_PROJECT_ROOT.parent / "nih-chest-xrays"
+
+
 @dataclass(frozen=True)
 class PathConfig:
-    raw_dataset: Path = Path(os.environ.get("NIH_DATASET_ROOT", r"D:\TA\nih-chest-xrays"))
-    project_root: Path = Path(os.environ.get("NIH_PROJECT_ROOT", r"D:\TA\nih-multimodal"))
+    raw_dataset: Path = Path(
+        os.environ.get("NIH_DATASET_ROOT", str(DEFAULT_DATASET_ROOT))
+    )
+    project_root: Path = Path(
+        os.environ.get("NIH_PROJECT_ROOT", str(DEFAULT_PROJECT_ROOT))
+    )
 
     @property
     def csv_path(self) -> Path:
@@ -96,7 +104,10 @@ class ModelConfig:
         ("resnet50", "ResNet50_Weights.IMAGENET1K_V2"),
         ("efficientnet_b0", "EfficientNet_B0_Weights.IMAGENET1K_V1"),
     )
-    chexnet_weights_path: str = r"D:\TA\nih-multimodal\models\model.pth.tar"
+    chexnet_weights_path: str = os.environ.get(
+        "CHEXNET_WEIGHTS_PATH",
+        str(DEFAULT_PROJECT_ROOT / "models" / "model.pth.tar"),
+    )
     chexnet_expected_sha256: str = "3777d98828c693da2178650f91679deb9a1eb0f8a96f0f22f1c531d15df9b21d"
     image_feature_dim: int = 512
     tabular_input_dim: int = 4

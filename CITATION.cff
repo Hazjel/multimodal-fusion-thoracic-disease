@@ -1,0 +1,20 @@
+cff-version: 1.2.0
+message: >-
+  If you use this software or evidence bundle, please cite the associated
+  manuscript and this repository.
+type: software
+title: >-
+  Incremental Value of Structured Metadata in Multimodal Chest X-ray
+  Classification
+authors:
+  - family-names: Sitorus
+    given-names: Jian Hazel
+repository-code: https://github.com/Hazjel/multimodal-fusion-thoracic-disease
+version: 1.0.0
+date-released: 2026-09-02
+keywords:
+  - chest radiography
+  - multimodal learning
+  - structured metadata
+  - explainable artificial intelligence
+  - NIH ChestX-ray14

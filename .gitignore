@@ -56,6 +56,10 @@ results/canonical/*/deployment/runs/*/validation_predictions.csv
 results/canonical/*/deployment/shap_background_cases.csv
 results/canonical/*/deployment/shap_background_scaled.npy
 
+# Per-fold C5 run state is several GB and is reproducible from published OOF
+# aggregates, registry entries, and the frozen protocol.
+results/canonical/*/runs/C5-*/
+
 # Generated C0 scratch/report state (freeze artifacts are kept separately)
 results/c0/
 results/canonical/.staging/
