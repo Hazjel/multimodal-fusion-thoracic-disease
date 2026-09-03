@@ -35,6 +35,9 @@ evidence because it influenced exploratory work before protocol freeze. Primary
 evidence remains patient-level five-fold out-of-fold evaluation on the official
 training pool.
 
+The immutable publication evidence bundle is available from the
+[manuscript-v1.0.1 release](https://github.com/Hazjel/multimodal-fusion-thoracic-disease/releases/tag/manuscript-v1.0.1).
+
 ## Main result
 
 | Scenario | Pooled ROC-AUC | Average Precision | Brier score |
@@ -150,6 +153,7 @@ results/
   canonical/<hash>/         Canonical manifests, OOF evidence, and summaries
   exploratory/              Explicitly non-canonical outputs
   legacy/                   Outputs from superseded designs
+models/                      Local legacy/non-canonical model artifacts only
 src/                        Data, model, training, evaluation, and XAI modules
 tests/                      C0 and protocol regression tests
 run_experiment.py           Canonical command-line entry point
@@ -181,6 +185,6 @@ ChestX-ray14 publication.
 
 ## License
 
-No software reuse license has been selected yet. Public visibility alone does
-not grant permission to copy, modify, or redistribute the code. A license should
-be chosen by the repository owner before encouraging third-party reuse.
+The original software and documentation in this repository are released under
+the [MIT License](LICENSE). NIH ChestX-ray14 data and third-party pretrained
+weights remain subject to their respective terms and are not relicensed here.
