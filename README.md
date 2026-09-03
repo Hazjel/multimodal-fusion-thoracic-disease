@@ -35,8 +35,8 @@ evidence because it influenced exploratory work before protocol freeze. Primary
 evidence remains patient-level five-fold out-of-fold evaluation on the official
 training pool.
 
-The immutable publication evidence bundle is available from the
-[manuscript-v1.0.1 release](https://github.com/Hazjel/multimodal-fusion-thoracic-disease/releases/tag/manuscript-v1.0.1).
+The versioned publication evidence bundle is available from the
+[manuscript-v1.0.2 release](https://github.com/Hazjel/multimodal-fusion-thoracic-disease/releases/tag/manuscript-v1.0.2).
 
 ## Main result
 
@@ -80,6 +80,10 @@ images_012/images/*.png
 
 The exact local data snapshot used for this study is documented in
 [docs/DATA_PROVENANCE.md](docs/DATA_PROVENANCE.md).
+
+The canonical pipeline constructs fold-specific inputs directly from the NIH
+metadata and immutable manifests. Pre-protocol row-split CSV exports are not
+part of the publication snapshot; see [data/README.md](data/README.md).
 
 ## Scenarios
 

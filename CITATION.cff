@@ -10,7 +10,7 @@ authors:
   - family-names: Sitorus
     given-names: Jian Hazel
 repository-code: https://github.com/Hazjel/multimodal-fusion-thoracic-disease
-version: 1.0.1
+version: 1.0.2
 date-released: 2026-09-03
 keywords:
   - chest radiography
